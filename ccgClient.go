@@ -3,17 +3,22 @@ package main
 import (
         "github.com/nsf/termbox-go"
         "time"
+		"net"
+		"./ccgPacket.go"
         )
 
 func main() {
-   initnet()
+	messages := make(chan Packet)
+	initnet()
    ui()
    cleanup()
 }
-// Network
-func initnet() {
 
+// Network
+func initnet(mesChan chan<- Packet) {
+	
 }
+
 // Handles login functions, returns true (successful) false (unsucessful)
 func login(handle string, password string) bool {
 

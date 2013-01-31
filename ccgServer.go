@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"bytes"
 	"container/list"
+	_ "./ccgPacket.go"
 )
 
 
@@ -12,19 +13,6 @@ const (
 	MessageFlag byte = 1
 	Command byte = 2
 )
-
-type Packet struct {
-	typ byte
-	timestamp uint
-	mesLen uint16
-	payload string
-}
-
-func (p Packet) getBytes() []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p)
-	return buf.Bytes()
-}
 
 
 //This function receives message packets from the given TCPConn-ection, parses them,
