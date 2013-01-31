@@ -6,5 +6,5 @@
 ###Messages
 |  Flag  | Timespamp |  Length  |    Message   |
 |:------:|:---------:|:--------:|:------------:|
-| 1 byte |  4 bytes  |  2 bytes | 2^16-1 bytes |
+| 1 byte |  4 bytes  |  2 bytes |'Length' bytes|
 
