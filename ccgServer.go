@@ -1,11 +1,10 @@
-package main
+package ccg
 
 import (
 	"net"
 	"encoding/binary"
 	"bytes"
 	"container/list"
-	_ "./ccgPacket.go"
 )
 
 

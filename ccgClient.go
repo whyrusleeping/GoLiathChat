@@ -1,21 +1,21 @@
-package main
+package ccg
 
 import (
         "github.com/nsf/termbox-go"
         "time"
 		"net"
-		"./ccgPacket.go"
         )
 
 func main() {
+	hostname := "127.0.0.1"
 	messages := make(chan Packet)
-	initnet()
+	initnet(hostname,messages)
    ui()
    cleanup()
 }
 
 // Network
-func initnet(mesChan chan<- Packet) {
+func initnet(hostname string, mesChan chan<- Packet) {
 	
 }
 

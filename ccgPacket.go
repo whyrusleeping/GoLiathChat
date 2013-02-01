@@ -1,6 +1,9 @@
-package ccgPack
+package ccg
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"bytes"
+)
 
 type Packet struct {
 	typ byte
