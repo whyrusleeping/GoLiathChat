@@ -1,3 +1,15 @@
+/************************
+
+Go Command Chat
+	-Jeromy Johnson, Travis Lane
+	A command line chat client that 
+	will make it easy to set up a 
+	quick secure chat room for any 
+	number of people
+
+************************/
+
+
 package ccg
 
 import (
@@ -13,6 +25,13 @@ const (
 	Command byte = 2
 )
 
+func HandleClient(c *net.TCPConn, outp chan<- Packet) {
+	//Authenticate the client, then pass to ListenClient
+	auth := true
+	if auth {
+		ListenClient(c,outp)
+	}
+}
 
 //This function receives message packets from the given TCPConn-ection, parses them,
 //and writes them to the output channel
