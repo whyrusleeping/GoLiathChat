@@ -57,7 +57,10 @@ func loginWindow() (bool, bool) {
 }
 
 func quitWindow() {
-
+  clear()
+  write_center(10, "Exiting...")
+  flush()
+  time.Sleep(1*time.Second)
 }
 
 // Termbox functions
