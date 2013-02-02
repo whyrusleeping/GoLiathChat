@@ -6,22 +6,32 @@ import (
 	"net"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 func main() {
 	defer cleanup()
-	hostname := "127.0.0.1"
+	hostname := "127.0.0.1:10234"
 	messages := make(chan Packet)
 	writer, err := makeConnection(hostname,messages)
 	if err != nil {
 		panic(err)
 	}
-	//send a test packet, so tired right now. Its probably all broken
-	p := Packet{}
-	p.typ = 1
-	p.payload = "hello world"
-	writer <- p
+	fmt.Println("starting message simulator and ui")
+	go simMessages(writer)
+
+	
 	ui()
+}
+
+func simMessages(chan<- Packet) {
+	for {
+		time.Sleep(time.Second * 3)
+		p := Packet{}
+		p.timestamp = time.Now().Second()
+		p.typ = 1
+		p.payload = "Random test message"
+	}
 }
 
 // Network
@@ -41,7 +51,10 @@ func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, erro
 }
 
 func writeMessages(conn *net.TCPConn, writeChan <-chan Packet) {
-
+	for {
+		p := <-writeChan
+		conn.Write(p.getBytes())
+	}
 }
 
 func readMessages(conn *net.TCPConn, mesChan chan<- Packet) {

@@ -28,6 +28,7 @@ const (
 
 func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 	//Authenticate the client, then pass to ListenClient
+	fmt.Println("New connection!")
 	auth := true
 	if auth {
 		ListenClient(c,outp)
