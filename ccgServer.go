@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"bytes"
 	"container/list"
+	"fmt"
 )
 
 
@@ -61,7 +62,9 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 //Processes them, then sends them to be relayed
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
 	for {
-		out <- <- in
+		p := <- in
+		fmt.Println(p.payload)
+		out <- p
 	}
 }
 

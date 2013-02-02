@@ -4,34 +4,50 @@ import (
 	"github.com/nsf/termbox-go"
 	"time"
 	"net"
+	"bytes"
+	"encoding/binary"
 )
 
 func main() {
+	defer cleanup()
 	hostname := "127.0.0.1"
 	messages := make(chan Packet)
-	err := initnet(hostname,messages)
+	writer, err := makeConnection(hostname,messages)
 	if err != nil {
 		panic(err)
 	}
+	//send a test packet, so tired right now. Its probably all broken
+	p := Packet{}
+	p.typ = 1
+	p.payload = "hello world"
+	writer <- p
 	ui()
-	cleanup()
 }
 
 // Network
-func initnet(hostname string, mesChan chan<- Packet) error{
+func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, error) {
 	addr, err := net.ResolveTCPAddr("tcp",hostname)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	conn, err := net.DialTCP("tcp",nil,addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	writer := make(chan Packet)
+	go writeMessages(conn, writer)
 	go readMessages(conn, mesChan)
-	return nil
+	return writer, nil
+}
+
+func writeMessages(conn *net.TCPConn, writeChan <-chan Packet) {
+
 }
 
 func readMessages(conn *net.TCPConn, mesChan chan<- Packet) {
+	flagBuf := make([]byte, 1)
+	lenBuf  := make([]byte, 2)
+	timeBuf := make([]byte, 4)
 	for {
 		//Need to check connectivity to see if a disconnect has happened
 		p := Packet{}
@@ -49,6 +65,7 @@ func readMessages(conn *net.TCPConn, mesChan chan<- Packet) {
 		mesChan <- p
 	}
 }
+
 
 
 // Handles login functions, returns true (successful) false (unsucessful)
