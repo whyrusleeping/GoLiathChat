@@ -15,7 +15,7 @@ type Packet struct {
 
 func (p Packet) getBytes() []byte {
 	buf := new(bytes.Buffer)
-	p.mesLen = len(payload)
+	p.mesLen = uint16(len(p.payload))
 	binary.Write(buf, binary.LittleEndian, p)
 	return buf.Bytes()
 }
@@ -23,7 +23,7 @@ func (p Packet) getBytes() []byte {
 func NewPacket(mtype byte, payload string) Packet {
 	p := Packet{}
 	p.typ = mtype
-	p.timestamp = time.Now().Seconds()
-	p.payload = payload
+	p.timestamp = int(time.Now().Unix())
+	p.payload = p.payload
 	return p
 }

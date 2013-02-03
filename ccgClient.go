@@ -130,15 +130,6 @@ func quitWindow() {
   time.Sleep(1*time.Second)
 }
 
-// Termbox functions
-func clear() {
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-}
-
-func flush() {
-	termbox.Flush()
-}
-
 func write_center(y int, mess string) {
 	x,_ := termbox.Size()
 	write_us( ((x/2)-(len(mess)/2)) , y, mess)

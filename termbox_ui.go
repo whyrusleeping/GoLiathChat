@@ -1,4 +1,4 @@
-package termbox_ui
+package ccg
 
 import (
         "github.com/nsf/termbox-go"
