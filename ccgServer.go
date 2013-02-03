@@ -1,10 +1,23 @@
-package main
+/************************
+
+Go Command Chat
+	-Jeromy Johnson, Travis Lane
+	A command line chat client that 
+	will make it easy to set up a 
+	quick secure chat room for any 
+	number of people
+
+************************/
+
+
+package ccg
 
 import (
 	"net"
 	"encoding/binary"
 	"bytes"
 	"container/list"
+	"fmt"
 )
 
 
@@ -13,19 +26,14 @@ const (
 	Command byte = 2
 )
 
-type Packet struct {
-	typ byte
-	timestamp uint
-	mesLen uint16
-	payload string
+func HandleClient(c *net.TCPConn, outp chan<- Packet) {
+	//Authenticate the client, then pass to ListenClient
+	fmt.Println("New connection!")
+	auth := true
+	if auth {
+		ListenClient(c,outp)
+	}
 }
-
-func (p Packet) getBytes() []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p)
-	return buf.Bytes()
-}
-
 
 //This function receives message packets from the given TCPConn-ection, parses them,
 //and writes them to the output channel
@@ -55,7 +63,9 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 //Processes them, then sends them to be relayed
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
 	for {
-		out <- <- in
+		p := <- in
+		fmt.Println(p.payload)
+		out <- p
 	}
 }
 
