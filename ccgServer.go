@@ -37,6 +37,7 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 
 	for {
 		p := Packet{}
+		flagBuf[0] = 0
 		c.Read(flagBuf)
 		p.typ = flagBuf[0] //Packet is just one byte
 		if p.typ == 0 {
