@@ -1,3 +1,15 @@
+/************************
+
+Go Command Chat
+	-Jeromy Johnson, Travis Lane
+	A command line chat system that 
+	will make it easy to set up a 
+	quick secure chat room for any 
+	number of people
+
+************************/
+
+
 package main
 
 import (
@@ -19,9 +31,14 @@ func main() {
 	}
 	fmt.Println("starting message simulator and ui")
 	go simMessages(writer)
-
 	
-	ui()
+	for i := 0; i < 10; i++ {
+		time.Sleep(time.Second * 2)
+		writer <- NewPacket(1, fmt.Sprintf("Message number: %d", i))
+	}
+	
+
+	//ui()
 }
 
 func simMessages(chan<- Packet) {
@@ -53,7 +70,12 @@ func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, erro
 func writeMessages(conn *net.TCPConn, writeChan <-chan Packet) {
 	for {
 		p := <-writeChan
-		conn.Write(p.getBytes())
+		fmt.Println("sending packet:" + p.payload)
+		n, err := conn.Write(p.getBytes())
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("wrote %d bytes.\n", n)
 	}
 }
 
