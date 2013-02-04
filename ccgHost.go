@@ -1,15 +1,14 @@
 package main
 
 import (
-	"net"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"net"
 )
 
-
 type Host struct {
-	con *net.TCPConn
+	con            *net.TCPConn
 	writer, reader chan Packet
 }
 
@@ -19,11 +18,11 @@ func NewHost() *Host {
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
-	addr, err := net.ResolveTCPAddr("tcp",hostname)
+	addr, err := net.ResolveTCPAddr("tcp", hostname)
 	if err != nil {
 		return err
 	}
-	conn, err := net.DialTCP("tcp",nil,addr)
+	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return err
 	}
@@ -37,13 +36,19 @@ func (h *Host) Connect(hostname string) error {
 	return nil
 }
 
+//Sends a chat message to the server
+func (h *Host) Send(message string) {
+	pack := NewPacket(1, message)
+	h.writer <- pack
+}
+
 func (h *Host) Cleanup() {
 	h.con.Close()
 }
 
 func (h *Host) writeMessages() {
 	for {
-		p := <- h.writer
+		p := <-h.writer
 		fmt.Println("sending packet:" + p.payload)
 		n, err := h.con.Write(p.getBytes())
 		if err != nil {
@@ -55,7 +60,7 @@ func (h *Host) writeMessages() {
 
 func (h *Host) readMessages() {
 	flagBuf := make([]byte, 1)
-	lenBuf  := make([]byte, 2)
+	lenBuf := make([]byte, 2)
 	timeBuf := make([]byte, 4)
 	for {
 		flagBuf[0] = 0
@@ -79,3 +84,7 @@ func (h *Host) readMessages() {
 	}
 }
 
+// Handles login functions, returns true (successful) false (unsucessful)
+func (h *Host) login(handle string, password string) bool {
+	return false
+}

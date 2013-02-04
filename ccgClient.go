@@ -33,7 +33,7 @@ func main() {
 	
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * 2)
-		serv.writer <- NewPacket(1, fmt.Sprintf("Message number: %d", i))
+		serv.Send(fmt.Sprintf("Message number: %d", i))
 	}
 
 	//ui()
@@ -49,11 +49,6 @@ func simMessages(chan<- Packet) {
 	}
 }
 
-// Handles login functions, returns true (successful) false (unsucessful)
-func login(handle string, password string) bool {
-
-	return false
-}
 // Cleanup
 func cleanup() {
 

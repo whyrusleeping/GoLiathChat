@@ -9,15 +9,14 @@ Go Command Chat
 
 ************************/
 
-
 package main
 
 import (
-	"net"
-	"encoding/binary"
 	"bytes"
 	"container/list"
+	"encoding/binary"
 	"fmt"
+	"net"
 )
 
 func HandleClient(c *net.TCPConn, outp chan<- Packet) {
@@ -25,7 +24,7 @@ func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 	fmt.Println("New connection!")
 	auth := true
 	if auth {
-		ListenClient(c,outp)
+		ListenClient(c, outp)
 	}
 }
 
@@ -33,7 +32,7 @@ func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 //and writes them to the output channel
 func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 	flagBuf := make([]byte, 1)
-	lenBuf  := make([]byte, 2)
+	lenBuf := make([]byte, 2)
 	timeBuf := make([]byte, 4)
 
 	for {
@@ -62,7 +61,7 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 //Processes them, then sends them to be relayed
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
 	for {
-		p := <- in
+		p := <-in
 		fmt.Println("Received:" + p.payload)
 		fmt.Println(p.typ)
 		out <- p
@@ -77,7 +76,8 @@ func MessageWriter(in <-chan Packet, connections *list.List) {
 		//for now, just write the packets back.
 		for i := connections.Front(); i != nil; i = i.Next() {
 			_, err := i.Value.(*net.TCPConn).Write(p.getBytes())
-			if err != nil {	}
+			if err != nil {
+			}
 		}
 	}
 }
@@ -89,7 +89,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	com := make(chan Packet) //Channel for incoming messages
+	com := make(chan Packet)   //Channel for incoming messages
 	parse := make(chan Packet) //Channel for parsed messages to be sent
 	go MessageWriter(parse, connections)
 	go MessageHandler(com, parse)
