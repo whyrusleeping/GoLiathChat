@@ -15,30 +15,25 @@ package main
 import (
 	"github.com/nsf/termbox-go"
 	"time"
-	"net"
-	"bytes"
-	"encoding/binary"
 	"fmt"
 )
+
 
 func main() {
 	defer cleanup()
 	hostname := "127.0.0.1:10234"
-	messages := make(chan Packet)
-	writer, conn, err := makeConnection(hostname,messages)
-	defer func() {
-		conn.Close()
-		fmt.Println("Closing connection")
-	}()
+	serv := NewHost()
+	defer serv.Cleanup()
+	err := serv.Connect(hostname)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("starting message simulator and ui")
-	go simMessages(writer)
+	go simMessages(serv.writer)
 	
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * 2)
-		writer <- NewPacket(1, fmt.Sprintf("Message number: %d", i))
+		serv.writer <- NewPacket(1, fmt.Sprintf("Message number: %d", i))
 	}
 
 	//ui()
@@ -53,62 +48,6 @@ func simMessages(chan<- Packet) {
 		p.payload = "Random test message"
 	}
 }
-
-// Network
-func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, *net.TCPConn, error) {
-	addr, err := net.ResolveTCPAddr("tcp",hostname)
-	if err != nil {
-		return nil, nil, err
-	}
-	conn, err := net.DialTCP("tcp",nil,addr)
-	if err != nil {
-		return nil, nil, err
-	}
-	writer := make(chan Packet)
-	go writeMessages(conn, writer)
-	go readMessages(conn, mesChan)
-	return writer, conn, nil
-}
-
-func writeMessages(conn *net.TCPConn, writeChan <-chan Packet) {
-	for {
-		p := <-writeChan
-		fmt.Println("sending packet:" + p.payload)
-		n, err := conn.Write(p.getBytes())
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("wrote %d bytes.\n", n)
-	}
-}
-
-func readMessages(conn *net.TCPConn, mesChan chan<- Packet) {
-	flagBuf := make([]byte, 1)
-	lenBuf  := make([]byte, 2)
-	timeBuf := make([]byte, 4)
-	for {
-		flagBuf[0] = 0
-		//Need to check connectivity to see if a disconnect has happened
-		p := Packet{}
-		_, err := conn.Read(flagBuf)
-		if err != nil {
-			panic(err)
-		}
-		p.typ = flagBuf[0] //Packet is just one byte
-		conn.Read(timeBuf)
-		buf := bytes.NewBuffer(timeBuf)
-		binary.Read(buf, binary.LittleEndian, &p.timestamp)
-		conn.Read(lenBuf)
-		buf = bytes.NewBuffer(lenBuf)
-		binary.Read(buf, binary.LittleEndian, &p.mesLen)
-		strBuf := make([]byte, p.mesLen)
-		conn.Read(strBuf)
-		p.payload = string(strBuf)
-		mesChan <- p
-	}
-}
-
-
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func login(handle string, password string) bool {
