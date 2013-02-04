@@ -18,9 +18,11 @@ func (p Packet) getBytes() []byte {
 	buf := new(bytes.Buffer)
 	p.mesLen = uint16(len(p.payload))
 	binary.Write(buf, binary.LittleEndian, p.typ)
-	binary.Write(buf, binary.LittleEndian, p.timestamp)
+	binary.Write(buf, binary.LittleEndian, int32(p.timestamp))
 	binary.Write(buf, binary.LittleEndian, p.mesLen)
-	binary.Write(buf, binary.LittleEndian, p.payload)
+	for _, c := range p.payload {
+		binary.Write(buf, binary.LittleEndian, byte(c))
+	}
 	fmt.Println(buf.Bytes())
 	return buf.Bytes()
 }

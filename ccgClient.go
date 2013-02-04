@@ -25,7 +25,11 @@ func main() {
 	defer cleanup()
 	hostname := "127.0.0.1:10234"
 	messages := make(chan Packet)
-	writer, err := makeConnection(hostname,messages)
+	writer, conn, err := makeConnection(hostname,messages)
+	defer func() {
+		conn.Close()
+		fmt.Println("Closing connection")
+	}()
 	if err != nil {
 		panic(err)
 	}
@@ -36,7 +40,6 @@ func main() {
 		time.Sleep(time.Second * 2)
 		writer <- NewPacket(1, fmt.Sprintf("Message number: %d", i))
 	}
-	
 
 	//ui()
 }
@@ -52,19 +55,19 @@ func simMessages(chan<- Packet) {
 }
 
 // Network
-func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, error) {
+func makeConnection(hostname string, mesChan chan<- Packet) (chan<- Packet, *net.TCPConn, error) {
 	addr, err := net.ResolveTCPAddr("tcp",hostname)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	conn, err := net.DialTCP("tcp",nil,addr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	writer := make(chan Packet)
 	go writeMessages(conn, writer)
 	go readMessages(conn, mesChan)
-	return writer, nil
+	return writer, conn, nil
 }
 
 func writeMessages(conn *net.TCPConn, writeChan <-chan Packet) {
@@ -84,9 +87,13 @@ func readMessages(conn *net.TCPConn, mesChan chan<- Packet) {
 	lenBuf  := make([]byte, 2)
 	timeBuf := make([]byte, 4)
 	for {
+		flagBuf[0] = 0
 		//Need to check connectivity to see if a disconnect has happened
 		p := Packet{}
-		conn.Read(flagBuf)
+		_, err := conn.Read(flagBuf)
+		if err != nil {
+			panic(err)
+		}
 		p.typ = flagBuf[0] //Packet is just one byte
 		conn.Read(timeBuf)
 		buf := bytes.NewBuffer(timeBuf)
