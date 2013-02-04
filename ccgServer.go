@@ -10,7 +10,7 @@ Go Command Chat
 ************************/
 
 
-package ccg
+package main
 
 import (
 	"net"
@@ -18,12 +18,6 @@ import (
 	"bytes"
 	"container/list"
 	"fmt"
-)
-
-
-const (
-	MessageFlag byte = 1
-	Command byte = 2
 )
 
 func HandleClient(c *net.TCPConn, outp chan<- Packet) {
@@ -46,6 +40,11 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 		p := Packet{}
 		c.Read(flagBuf)
 		p.typ = flagBuf[0] //Packet is just one byte
+		if p.typ == 0 {
+			c.Close()
+			fmt.Println("Client disconnected.")
+			break
+		}
 		c.Read(timeBuf)
 		buf := bytes.NewBuffer(timeBuf)
 		binary.Read(buf, binary.LittleEndian, &p.timestamp)
@@ -64,7 +63,8 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
 	for {
 		p := <- in
-		fmt.Println(p.payload)
+		fmt.Println("Received:" + p.payload)
+		fmt.Println(p.typ)
 		out <- p
 	}
 }
@@ -94,7 +94,9 @@ func main() {
 	go MessageWriter(parse, connections)
 	go MessageHandler(com, parse)
 	for {
+		fmt.Println("waiting for connection")
 		con, err := ln.AcceptTCP()
+		fmt.Println("connection made, checking...")
 		if err != nil {
 			continue
 		}

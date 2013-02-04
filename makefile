@@ -1,10 +1,9 @@
-all: ui client server
+all: client server
 
-ui:
-	go build termbox_ui.go
+CLIFILES=ccgClient.go ccgPacket.go termbox_ui.go
+client: $(CLIFILES)
+	go build -o client $(CLIFILES)
 
-client:
-	go build ccgClient.go ccgPacket.go termbox_ui.go
-
-server:
-	go build ccgServer.go ccgPacket.go
+SERVFILES=ccgServer.go ccgPacket.go 
+server: $(SERVFILES)
+	go build -o server $(SERVFILES)

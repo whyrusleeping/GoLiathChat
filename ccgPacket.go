@@ -1,4 +1,4 @@
-package ccg
+package main
 
 import (
 	"encoding/binary"
