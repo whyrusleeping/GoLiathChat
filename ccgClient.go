@@ -43,7 +43,7 @@ func simMessages(chan<- Packet) {
 	for {
 		time.Sleep(time.Second * 3)
 		p := Packet{}
-		p.timestamp = time.Now().Second()
+		p.timestamp = int32(time.Now().Second())
 		p.typ = 1
 		p.payload = "Random test message"
 	}

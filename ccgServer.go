@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"time"
 )
 
 func HandleClient(c *net.TCPConn, outp chan<- Packet) {
@@ -39,7 +40,7 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 		p := Packet{}
 		flagBuf[0] = 0
 		c.Read(flagBuf)
-		p.typ = flagBuf[0] //Packet is just one byte
+		p.typ = flagBuf[0] //Packet type is just one byte
 		if p.typ == 0 {
 			c.Close()
 			fmt.Println("Client disconnected.")
@@ -47,7 +48,10 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 		}
 		c.Read(timeBuf)
 		buf := bytes.NewBuffer(timeBuf)
-		binary.Read(buf, binary.LittleEndian, &p.timestamp)
+		err := binary.Read(buf, binary.LittleEndian, &p.timestamp)
+		if err != nil {
+			panic(err)
+		}
 		c.Read(lenBuf)
 		buf = bytes.NewBuffer(lenBuf)
 		binary.Read(buf, binary.LittleEndian, &p.mesLen)
@@ -63,7 +67,8 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
 	for {
 		p := <-in
-		fmt.Println("Received:" + p.payload)
+		ts := time.Unix(int64(p.timestamp), 0)
+		fmt.Println(ts.Format(time.Stamp) + "Received:" + p.payload)
 		fmt.Println(p.typ)
 		out <- p
 	}

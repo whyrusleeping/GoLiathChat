@@ -4,12 +4,11 @@ import (
 	"encoding/binary"
 	"time"
 	"bytes"
-	"fmt"
 )
 
 type Packet struct {
 	typ byte
-	timestamp int
+	timestamp int32
 	mesLen uint16
 	payload string
 }
@@ -23,14 +22,13 @@ func (p Packet) getBytes() []byte {
 	for _, c := range p.payload {
 		binary.Write(buf, binary.LittleEndian, byte(c))
 	}
-	fmt.Println(buf.Bytes())
 	return buf.Bytes()
 }
 
 func NewPacket(mtype byte, payload string) Packet {
 	p := Packet{}
 	p.typ = mtype
-	p.timestamp = int(time.Now().Unix())
+	p.timestamp = int32(time.Now().Unix())
 	p.payload = payload
 	return p
 }
