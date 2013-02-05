@@ -9,15 +9,13 @@ Go Command Chat
 
 ************************/
 
-
 package main
 
 import (
+	"fmt"
 	"github.com/nsf/termbox-go"
 	"time"
-	"fmt"
 )
-
 
 func main() {
 	defer cleanup()
@@ -30,7 +28,7 @@ func main() {
 	}
 	fmt.Println("starting message simulator and ui")
 	go simMessages(serv.writer)
-	
+
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * 2)
 		serv.Send(fmt.Sprintf("Message number: %d", i))
@@ -63,13 +61,13 @@ func ui() {
 	defer termbox.Close()
 	//Main UI loop
 
-	quit := false;
-	loggedin := false;
+	quit := false
+	loggedin := false
 
 	for !quit {
 		for !loggedin {
-			loggedin,quit = loginWindow();
-			if(quit) {
+			loggedin, quit = loginWindow()
+			if quit {
 				break
 			}
 		}
@@ -82,20 +80,20 @@ func loginWindow() (bool, bool) {
 
 	write_center(10, "Login:")
 	flush()
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 	return false, true
 }
 
 func quitWindow() {
-  clear()
-  write_center(10, "Exiting...")
-  flush()
-  time.Sleep(1*time.Second)
+	clear()
+	write_center(10, "Exiting...")
+	flush()
+	time.Sleep(1 * time.Second)
 }
 
 func write_center(y int, mess string) {
-	x,_ := termbox.Size()
-	write_us( ((x/2)-(len(mess)/2)) , y, mess)
+	x, _ := termbox.Size()
+	write_us(((x / 2) - (len(mess) / 2)), y, mess)
 }
 
 // Display text on the screen starting at x,y
@@ -106,10 +104,11 @@ func write_us(x int, y int, mess string) {
 		x++
 	}
 }
+
 // Displays text on the screen starting at x,y and cuts the end off
 func write(x int, y int, mess string) {
-	sx,_ := termbox.Size()
-	if(x+len(mess) > sx) {
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
 		mess = mess[:sx]
 	}
 	for _, c := range mess {
@@ -120,6 +119,6 @@ func write(x int, y int, mess string) {
 
 // Display a message in the center of the screen.
 func message_us(mess string) {
-	_,y := termbox.Size()
+	_, y := termbox.Size()
 	write_center(y/2, mess)
 }

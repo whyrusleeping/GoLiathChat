@@ -1,16 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"time"
-	"bytes"
 )
 
 type Packet struct {
-	typ byte
+	typ       byte
 	timestamp int32
-	mesLen uint16
-	payload string
+	mesLen    uint16
+	payload   string
 }
 
 func (p Packet) getBytes() []byte {

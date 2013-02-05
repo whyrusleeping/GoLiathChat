@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"crypto/rsa"
 )
 
 type Host struct {
