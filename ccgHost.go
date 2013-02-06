@@ -86,5 +86,30 @@ func (h *Host) readMessages() {
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) login(handle string, password string) bool {
-	return false
+	flagBuf := make([]byte, 1)
+	userBuf := make([]byte, 64)
+	passBuf := make([]byte, 64)
+
+	flagBuf[0] = tLogin
+
+	fmt.Println("Sending Login info to server...")
+	h.con.Write(flagBuf)
+	h.con.Write(userBuf)
+	h.con.Write(passBuf)
+
+	fmt.Println("Info sent, waiting for response.")
+
+	h.con.Read(flagBuf)
+	if flagBuf[0] != tLogin {
+		fmt.Println("Server didnt return login")
+		return false
+	}
+	fmt.Println("Server acknowledged login, awaiting decision")
+	h.con.Read(flagBuf)
+	if flagBuf[0] != 0xFF {
+		fmt.Println("Server denied authentication")
+		return false
+	}
+	fmt.Println("Authenticated!")
+	return true
 }

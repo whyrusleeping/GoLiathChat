@@ -23,10 +23,43 @@ import (
 func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 	//Authenticate the client, then pass to ListenClient
 	fmt.Println("New connection!")
-	auth := true
+	auth := AuthClient(c)
 	if auth {
 		ListenClient(c, outp)
 	}
+}
+
+func AuthClient(c *net.TCPConn) bool {
+	flagBuf := make([]byte, 1)
+
+	c.Read(flagBuf)
+
+	//Check to make sure they are at least attempting to authenticate
+	fmt.Println(flagBuf)
+	if flagBuf[0] != tLogin {
+		fmt.Println("Client not authenticated")
+		return false
+	}
+
+	//Temporary code for now, until we develop an actual login scheme
+	userBuf := make([]byte, 64)
+	passBuf := make([]byte, 64)
+
+	c.Read(userBuf)
+	c.Read(passBuf)
+
+	//Verify the data using magic.
+
+	flagBuf[0] = tLogin
+	n, err := c.Write(flagBuf)
+	fmt.Printf("Wrote %d byte[s]\n",n)
+	if err != nil {
+		panic(err)
+	}
+	flagBuf[0] = 0xFF
+	c.Write(flagBuf)
+	fmt.Println("Authenticated!")
+	return true
 }
 
 //This function receives message packets from the given TCPConn-ection, parses them,
@@ -41,7 +74,7 @@ func ListenClient(c *net.TCPConn, outp chan<- Packet) {
 		flagBuf[0] = 0
 		c.Read(flagBuf)
 		p.typ = flagBuf[0] //Packet type is just one byte
-		if p.typ == 0 {
+		if p.typ == tQuit {
 			c.Close()
 			fmt.Println("Client disconnected.")
 			break
@@ -107,7 +140,7 @@ func main() {
 			continue
 		}
 		connections.PushBack(con)
-		go ListenClient(con, com) //Asynchronously listen to the connection
+		go HandleClient(con, com) //Asynchronously listen to the connection
 	}
 
 }
