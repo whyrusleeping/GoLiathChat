@@ -50,14 +50,10 @@ func AuthClient(c *net.TCPConn) bool {
 
 	//Verify the data using magic.
 
-	flagBuf[0] = tLogin
-	n, err := c.Write(flagBuf)
-	fmt.Printf("Wrote %d byte[s]\n",n)
-	if err != nil {
-		panic(err)
-	}
-	flagBuf[0] = 0xFF
-	c.Write(flagBuf)
+	authBuf := make([]byte, 8)
+	authBuf[0] = tLogin
+	authBuf[1] = 11
+	c.Write(authBuf)
 	fmt.Println("Authenticated!")
 	return true
 }

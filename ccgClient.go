@@ -24,6 +24,7 @@ func main() {
 	defer serv.Cleanup()
 	err := serv.Connect(hostname)
 	serv.login("Jeromy","Password")
+	serv.Start()
 	if err != nil {
 		panic(err)
 	}

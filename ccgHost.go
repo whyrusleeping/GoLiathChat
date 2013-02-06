@@ -30,10 +30,12 @@ func (h *Host) Connect(hostname string) error {
 	h.reader = make(chan Packet)
 	h.writer = make(chan Packet)
 
+	return nil
+}
+
+func (h *Host) Start() {
 	go h.writeMessages()
 	go h.readMessages()
-
-	return nil
 }
 
 //Sends a chat message to the server
@@ -99,17 +101,12 @@ func (h *Host) login(handle string, password string) bool {
 
 	fmt.Println("Info sent, waiting for response.")
 
-	h.con.Read(flagBuf)
-	if flagBuf[0] != tLogin {
-		fmt.Println("Server didnt return login")
-		return false
+	authBuf := make([]byte, 8)
+	h.con.Read(authBuf)
+	if authBuf[0] != tLogin || authBuf[1] != 11 {
+		fmt.Println("Failed to authenticate!")
 	}
-	fmt.Println("Server acknowledged login, awaiting decision")
-	h.con.Read(flagBuf)
-	if flagBuf[0] != 0xFF {
-		fmt.Println("Server denied authentication")
-		return false
-	}
+
 	fmt.Println("Authenticated!")
 	return true
 }
