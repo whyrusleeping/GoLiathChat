@@ -81,8 +81,6 @@ func main() {
 					break
 				} else if keyEvent.Key == termbox.KeyEnter {
 					if input != "" {
-						message := MessageObject{input, "default", time.Now().Second()}
-						messages.PushFront(message)
 						serv.Send(input)
 						input = ""
 					}
