@@ -30,30 +30,7 @@ func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 }
 
 func AuthClient(c *net.TCPConn) bool {
-	flagBuf := make([]byte, 1)
 
-	c.Read(flagBuf)
-
-	//Check to make sure they are at least attempting to authenticate
-	fmt.Println(flagBuf)
-	if flagBuf[0] != tLogin {
-		fmt.Println("Client not authenticated")
-		return false
-	}
-
-	//Temporary code for now, until we develop an actual login scheme
-	userBuf := make([]byte, 64)
-	passBuf := make([]byte, 64)
-
-	c.Read(userBuf)
-	c.Read(passBuf)
-
-	//Verify the data using magic.
-
-	authBuf := make([]byte, 8)
-	authBuf[0] = tLogin
-	authBuf[1] = 11
-	c.Write(authBuf)
 	fmt.Println("Authenticated!")
 	return true
 }

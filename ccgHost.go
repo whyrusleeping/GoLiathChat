@@ -7,6 +7,7 @@ import (
 	"net"
 )
 
+//Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
 	con            *net.TCPConn
 	writer, reader chan Packet
@@ -87,25 +88,7 @@ func (h *Host) readMessages() {
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) login(handle string, password string) bool {
-	flagBuf := make([]byte, 1)
-	userBuf := make([]byte, 64)
-	passBuf := make([]byte, 64)
-
-	flagBuf[0] = tLogin
-
-	fmt.Println("Sending Login info to server...")
-	h.con.Write(flagBuf)
-	h.con.Write(userBuf)
-	h.con.Write(passBuf)
-
-	fmt.Println("Info sent, waiting for response.")
-
-	authBuf := make([]byte, 8)
-	h.con.Read(authBuf)
-	if authBuf[0] != tLogin || authBuf[1] != 11 {
-		fmt.Println("Failed to authenticate!")
-	}
+func (h *Host) Login(handle string, password string) bool {
 
 	fmt.Println("Authenticated!")
 	return true
