@@ -15,11 +15,17 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"time"
+	"container/list"
 )
+
+type MessageObject struct {
+	message   string //The Message
+	sender    string //Who sent it
+	timestamp int    //When it was sent
+}
 
 func main() {
 	hostname := "127.0.0.1:10234"
-	defer cleanup()
 
 	/* Initialize Connection */
 	serv := NewHost()
@@ -35,101 +41,157 @@ func main() {
 	serv.Start()
 	/* Initialization Complete */
 
-	//Temp code past here...
-	fmt.Println("starting message simulator")
+	termErr := termbox.Init()
+	if termErr != nil {
+		panic(termErr)
+	}
+	defer termbox.Close()
 
-	for i := 0; i < 10; i++ {
-		time.Sleep(time.Second * 2)
-		serv.Send(fmt.Sprintf("Message number: %d", i))
+	//Setup the variables
+	input := ""
+	running := true
+	start_message := 0
+	messages := list.New()
+	keyboard := make(chan termbox.Event)
+	//Display the window
+	clear()
+	displayWindow(input, messages, start_message)
+	flush()
+
+	go keyboardEventPoller(keyboard)
+	//Start the goroutines
+	for running {
+		select {
+		case keyEvent := <-keyboard:
+			switch keyEvent.Type {
+			case termbox.EventKey:
+				if keyEvent.Key == termbox.KeyCtrlQ {
+					clear()
+					message_us("Exiting")
+					flush()
+					running = false
+					break
+				} else if keyEvent.Key == termbox.KeyCtrlC {
+					clear()
+					flush()
+					running = false
+					break
+				} else if keyEvent.Key == termbox.KeyEnter {
+					if input != "" {
+						message := MessageObject{input, "default", time.Now().Second()}
+						messages.PushFront(message)
+						serv.Send(input)
+						input = ""
+					}
+				} else if keyEvent.Key == termbox.KeyBackspace {
+					if len(input) > 0 {
+						input = input[0 : len(input)-1]
+					}
+				} else if keyEvent.Key == termbox.KeyBackspace2 {
+					if len(input) > 0 {
+						input = input[0 : len(input)-1]
+					}
+				} else if keyEvent.Key == termbox.KeyArrowUp {
+					if start_message < messages.Len() {
+						start_message += 1
+					}
+				} else if keyEvent.Key == termbox.KeyArrowDown {
+					if start_message > 0 {
+						start_message -= 1
+					}
+				} else if keyEvent.Key == termbox.KeyArrowRight {
+					//Do nothing for now
+				} else if keyEvent.Key == termbox.KeyArrowLeft {
+					//Do nothing for now
+				} else if keyEvent.Key == termbox.KeySpace {
+					input += " "
+					//Do nothing for now
+				} else {
+					if len(input) <= 160 {
+						input += string(keyEvent.Ch)
+					}
+				}
+				clear()
+				displayWindow(input, messages, start_message)
+				flush()
+			case termbox.EventResize:
+			  clear()
+				displayWindow(input, messages, start_message)
+				flush()
+			case termbox.EventError:
+				panic(keyEvent.Err)
+			}
+		case serverEvent := <-serv.reader:
+      message := MessageObject{serverEvent.payload, "default", time.Now().Second()}
+			messages.PushFront(message)
+			clear()
+		  displayWindow(input, messages, start_message)
+			flush()
+		}
 	}
 
 	//Sleep to ensure final messages get sent
 	time.Sleep(time.Second * 2)
 }
 
-func simMessages(send chan<- Packet) {
+func keyboardEventPoller(event chan<- termbox.Event) {
 	for {
-		time.Sleep(time.Second * 3)
-		p := Packet{}
-		p.timestamp = int32(time.Now().Second())
-		p.typ = 1
-		p.payload = "Random test message"
-		send <- p
+		event <- termbox.PollEvent()
 	}
 }
 
-// Cleanup
-func cleanup() {
+//Updates the chat
+func displayWindow(input string, messages *list.List, start_message int) {
 
+	x, y := termbox.Size()
+	if x != 0 && y != 0 {
+		input_top := displayInput(input)
+		displayMessages(messages, start_message, input_top)
+	}
 }
 
-// UI 
-func ui() {
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
+func displayMessages(messages *list.List, offset int, input_top int) {
+	line_cursor := input_top
+	sx, sy := termbox.Size()
+	// Iterate to the current message
+	p := messages.Front()
+	for i := 0; i < offset; i++ {
+		p = p.Next()
 	}
-	defer termbox.Close()
-	//Main UI loop
+	// Iterate over the messages
+	for ; p != nil; p = p.Next() {
 
-	quit := false
-	loggedin := false
+		cur := p.Value.(MessageObject)
+		lines := getLines(cur.message, sx)
+		fill_h("-", 0, sy-line_cursor, sx)
 
-	for !quit {
-		for !loggedin {
-			loggedin, quit = loginWindow()
-			if quit {
-				break
-			}
+		line_cursor += 1
+		for i := len(lines) - 1; i >= 0; i-- {
+			write(0, sy-line_cursor, lines[i])
+			line_cursor += 1
 		}
-	}
-	quitWindow()
-}
-
-func loginWindow() (bool, bool) {
-	clear()
-
-	write_center(10, "Login:")
-	flush()
-	time.Sleep(1 * time.Second)
-	return false, true
-}
-
-func quitWindow() {
-	clear()
-	write_center(10, "Exiting...")
-	flush()
-	time.Sleep(1 * time.Second)
-}
-
-func write_center(y int, mess string) {
-	x, _ := termbox.Size()
-	write_us(((x / 2) - (len(mess) / 2)), y, mess)
-}
-
-// Display text on the screen starting at x,y
-// Assumes that you are not going to go outside of bounds
-func write_us(x int, y int, mess string) {
-	for _, c := range mess {
-		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
-		x++
+		fill_h("-", 0, sy-line_cursor, sx)
 	}
 }
 
-// Displays text on the screen starting at x,y and cuts the end off
-func write(x int, y int, mess string) {
-	sx, _ := termbox.Size()
-	if x+len(mess) > sx {
-		mess = mess[:sx]
+func displayInput(input string) int {
+	sx, sy := termbox.Size()
+	line_cursor := 1
+	if input == "" {
+		termbox.SetCursor(0, sy-line_cursor)
+		line_cursor += 1
+		fill_h("-", 0, sy-line_cursor, sx)
+		return line_cursor
+	} else {
+		lines := getLines(input, sx)
+		for i := len(lines) - 1; i >= 0; i-- {
+			write(0, sy-line_cursor, lines[i])
+			line_cursor += 1
+		}
+		termbox.SetCursor(len(lines[len(lines)-1]), sy-1)
+		fill_h("-", 0, sy-line_cursor, sx)
+		return line_cursor
 	}
-	for _, c := range mess {
-		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
-		x++
-	}
+	return 1
 }
 
-// Display a message in the center of the screen.
-func message_us(mess string) {
-	_, y := termbox.Size()
-	write_center(y/2, mess)
-}
