@@ -31,6 +31,6 @@ func GeneratePepper() []byte {
 
 func HashPassword(password string) []byte {
 	salt := "brownchocolatemoosecoffeelatte"
-	pHash := scrypt.Key([]byte(password), []byte(salt), 2^17, 19, 103, 32)
+	pHash,_ := scrypt.Key([]byte(password), []byte(salt), 2^17, 19, 103, 32)
 	return pHash
 }

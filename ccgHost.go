@@ -72,7 +72,7 @@ func (h *Host) Cleanup() {
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.writer
-		n, err := h.con.Write(p.getBytes())
+		_, err := h.con.Write(p.getBytes())
 		if err != nil {
 			log.Printf("Failed to send message.\n")
 			continue
