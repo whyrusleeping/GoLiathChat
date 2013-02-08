@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"crypto/tls"
-	"crypto/x509"
 	"log"
 	"fmt"
 	"net"
@@ -32,7 +31,6 @@ func NewHost() *Host {
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
-	fmt.Println(h.config)
 	con, err := tls.Dial("tcp",hostname,h.config)
 	if err != nil {
 		return err
@@ -40,11 +38,13 @@ func (h *Host) Connect(hostname string) error {
 	h.con = con
 	log.Println("client: connected to: ", h.con.RemoteAddr())
 
+	/*
 	state := con.ConnectionState()
 	for _,v := range state.PeerCertificates {
 		fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
 		fmt.Println(v.Subject)
 	}
+	*/
 
 	h.reader = make(chan Packet)
 	h.writer = make(chan Packet)
@@ -111,6 +111,7 @@ func (h *Host) readMessages() {
 func (h *Host) Login(handle string, password string) bool {
 	sc := make([]byte, 32)
 	h.con.Read(sc)
+	fmt.Println(sc)
 	cc := GeneratePepper()
 	combSalt := make([]byte, len(sc) + len(cc))
 	copy(combSalt, sc)

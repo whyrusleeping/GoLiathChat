@@ -23,17 +23,15 @@ func main() {
 	serv := NewHost()
 	defer serv.Cleanup()
 	err := serv.Connect(hostname)
-	/*
 	if !serv.Login("username","password") {
 		fmt.Println("Login failed... Exiting.")
 		return
-	}*/
+	}
 	serv.Start()
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("starting message simulator and ui")
-	go simMessages(serv.writer)
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * 2)
@@ -43,13 +41,14 @@ func main() {
 	//ui()
 }
 
-func simMessages(chan<- Packet) {
+func simMessages(send chan<- Packet) {
 	for {
 		time.Sleep(time.Second * 3)
 		p := Packet{}
 		p.timestamp = int32(time.Now().Second())
 		p.typ = 1
 		p.payload = "Random test message"
+		send <- p
 	}
 }
 

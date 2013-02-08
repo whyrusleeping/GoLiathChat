@@ -37,6 +37,7 @@ func HandleClient(c net.Conn, outp chan<- Packet) {
 func AuthClient(c net.Conn) bool {
 	password := "password"
 	sc := GeneratePepper()
+	fmt.Println(sc)
 	c.Write(sc)
 	hashA := make([]byte, 32)
 	cc := make([]byte, 32)
@@ -50,6 +51,7 @@ func AuthClient(c net.Conn) bool {
 
 	hashAver,_ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
 
+	//Verify keys are the same.
 	ver := true
 	for i := 0; ver && i < len(hashA); i++ {
 		ver = ver && (hashA[i] == hashAver[i])
