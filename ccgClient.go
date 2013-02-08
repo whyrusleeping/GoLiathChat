@@ -65,12 +65,15 @@ func main() {
 		case keyEvent := <-keyboard:
 			switch keyEvent.Type {
 			case termbox.EventKey:
+			  // Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
 					clear()
-					message_us("Exiting")
+					message_us("Exiting...")
 					flush()
+					time.Sleep(time.Second * 2)
 					running = false
 					break
+				// Unsafe Exit (Does not wait)
 				} else if keyEvent.Key == termbox.KeyCtrlC {
 					clear()
 					flush()
@@ -131,7 +134,7 @@ func main() {
 	}
 
 	//Sleep to ensure final messages get sent
-	time.Sleep(time.Second * 2)
+	
 }
 
 func keyboardEventPoller(event chan<- termbox.Event) {
