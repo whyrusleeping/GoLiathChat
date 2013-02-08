@@ -18,27 +18,33 @@ import (
 )
 
 func main() {
-	defer cleanup()
 	hostname := "127.0.0.1:10234"
+	defer cleanup()
+
+	/* Initialize Connection */
 	serv := NewHost()
 	defer serv.Cleanup()
 	err := serv.Connect(hostname)
+	if err != nil {
+		panic(err)
+	}
 	if !serv.Login("username", "password") {
 		fmt.Println("Login failed... Exiting.")
 		return
 	}
 	serv.Start()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("starting message simulator and ui")
+	/* Initialization Complete */
+
+	//Temp code past here...
+	fmt.Println("starting message simulator")
 
 	for i := 0; i < 10; i++ {
 		time.Sleep(time.Second * 2)
 		serv.Send(fmt.Sprintf("Message number: %d", i))
 	}
 
-	//ui()
+	//Sleep to ensure final messages get sent
+	time.Sleep(time.Second * 2)
 }
 
 func simMessages(send chan<- Packet) {
