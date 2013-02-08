@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"crypto/tls"
+	"crypto/x509"
 	"log"
 	"fmt"
 	"net"
+	"code.google.com/p/go.crypto/scrypt"
 )
 
 //Usage is simple, read messages from the reader, and write to the writer.
@@ -30,6 +32,7 @@ func NewHost() *Host {
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
+	fmt.Println(h.config)
 	con, err := tls.Dial("tcp",hostname,h.config)
 	if err != nil {
 		return err
@@ -37,6 +40,11 @@ func (h *Host) Connect(hostname string) error {
 	h.con = con
 	log.Println("client: connected to: ", h.con.RemoteAddr())
 
+	state := con.ConnectionState()
+	for _,v := range state.PeerCertificates {
+		fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+		fmt.Println(v.Subject)
+	}
 
 	h.reader = make(chan Packet)
 	h.writer = make(chan Packet)
@@ -101,6 +109,29 @@ func (h *Host) readMessages() {
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle string, password string) bool {
+	sc := make([]byte, 32)
+	h.con.Read(sc)
+	cc := GeneratePepper()
+	combSalt := make([]byte, len(sc) + len(cc))
+	copy(combSalt, sc)
+	copy(combSalt[len(sc):], cc)
+
+	hashA,_ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
+
+	h.con.Write(hashA)
+	h.con.Write(cc)
+	sr := make([]byte, 32)
+	h.con.Read(sr)
+	srVer,_ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+	ver := true
+	for i := 0; ver && i < 32; i++ {
+		ver = ver && (sr[i] == srVer[i])
+	}
+	if !ver {
+		fmt.Println("Invalid response from server, authentication failed.")
+		return false
+	}
+
 	fmt.Println("Authenticated!")
 	return true
 }

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"log"
+	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
 	"crypto/x509"
 	"time"
@@ -34,6 +35,33 @@ func HandleClient(c net.Conn, outp chan<- Packet) {
 }
 
 func AuthClient(c net.Conn) bool {
+	password := "password"
+	sc := GeneratePepper()
+	c.Write(sc)
+	hashA := make([]byte, 32)
+	cc := make([]byte, 32)
+
+	c.Read(hashA)
+	c.Read(cc)
+
+	combSalt := make([]byte, len(sc) + len(cc))
+	copy(combSalt, sc)
+	copy(combSalt[len(sc):], cc)
+
+	hashAver,_ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
+
+	ver := true
+	for i := 0; ver && i < len(hashA); i++ {
+		ver = ver && (hashA[i] == hashAver[i])
+	}
+	if !ver {
+		fmt.Println("Invalid Authentication")
+		return false
+	}
+
+	sr,_ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+	c.Write(sr)
+
 	fmt.Println("Authenticated!")
 	return true
 }
