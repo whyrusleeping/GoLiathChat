@@ -3,31 +3,41 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"crypto/tls"
+	"log"
 	"fmt"
 	"net"
 )
 
 //Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
-	con            *net.TCPConn
+	con            net.Conn
 	writer, reader chan Packet
+	cert		   tls.Certificate
+	config		   *tls.Config
 }
 
 func NewHost() *Host {
-	return &Host{}
+	h := Host{}
+	cert, err := tls.LoadX509KeyPair("certs/client.pem", "certs/client.key")
+	if err != nil {
+		log.Fatalf("server: loadkeys: %s", err)
+	}
+	h.cert = cert
+	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
+	return &h
 }
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
-	addr, err := net.ResolveTCPAddr("tcp", hostname)
+	con, err := tls.Dial("tcp",hostname,h.config)
 	if err != nil {
 		return err
 	}
-	conn, err := net.DialTCP("tcp", nil, addr)
-	if err != nil {
-		return err
-	}
-	h.con = conn
+	h.con = con
+	log.Println("client: connected to: ", h.con.RemoteAddr())
+
+
 	h.reader = make(chan Packet)
 	h.writer = make(chan Packet)
 
@@ -46,7 +56,9 @@ func (h *Host) Send(message string) {
 }
 
 func (h *Host) Cleanup() {
-	h.con.Close()
+	if h.con != nil {
+		h.con.Close()
+	}
 }
 
 func (h *Host) writeMessages() {
@@ -89,7 +101,6 @@ func (h *Host) readMessages() {
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle string, password string) bool {
-
 	fmt.Println("Authenticated!")
 	return true
 }

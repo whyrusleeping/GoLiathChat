@@ -1,26 +1,30 @@
 /************************
 
 Go Command Chat
-	-Jeromy Johnson, Travis Lane
-	A command line chat system that 
-	will make it easy to set up a 
-	quick secure chat room for any 
-	number of people
+-Jeromy Johnson, Travis Lane
+A command line chat system that 
+will make it easy to set up a 
+quick secure chat room for any 
+number of people
 
 ************************/
 
 package main
 
 import (
+	"crypto/rand"
 	"bytes"
 	"container/list"
 	"encoding/binary"
 	"fmt"
 	"net"
+	"log"
+	"crypto/tls"
+	"crypto/x509"
 	"time"
 )
 
-func HandleClient(c *net.TCPConn, outp chan<- Packet) {
+func HandleClient(c net.Conn, outp chan<- Packet) {
 	//Authenticate the client, then pass to ListenClient
 	fmt.Println("New connection!")
 	auth := AuthClient(c)
@@ -29,15 +33,14 @@ func HandleClient(c *net.TCPConn, outp chan<- Packet) {
 	}
 }
 
-func AuthClient(c *net.TCPConn) bool {
-
+func AuthClient(c net.Conn) bool {
 	fmt.Println("Authenticated!")
 	return true
 }
 
 //This function receives message packets from the given TCPConn-ection, parses them,
 //and writes them to the output channel
-func ListenClient(c *net.TCPConn, outp chan<- Packet) {
+func ListenClient(c net.Conn, outp chan<- Packet) {
 	flagBuf := make([]byte, 1)
 	lenBuf := make([]byte, 2)
 	timeBuf := make([]byte, 4)
@@ -87,7 +90,7 @@ func MessageWriter(in <-chan Packet, connections *list.List) {
 
 		//for now, just write the packets back.
 		for i := connections.Front(); i != nil; i = i.Next() {
-			_, err := i.Value.(*net.TCPConn).Write(p.getBytes())
+			_, err := i.Value.(net.Conn).Write(p.getBytes())
 			if err != nil {
 			}
 		}
@@ -95,25 +98,43 @@ func MessageWriter(in <-chan Packet, connections *list.List) {
 }
 
 func main() {
-	addr, _ := net.ResolveTCPAddr("tcp", "localhost:10234")
-	ln, err := net.ListenTCP("tcp", addr)
+	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
+	if err != nil {
+		log.Fatalf("server: loadkeys: %s", err)
+	}
+	config := tls.Config{Certificates: []tls.Certificate{cert}}
+	config.Rand = rand.Reader
+	service := "127.0.0.1:10234"
+	listener, err := tls.Listen("tcp", service, &config)
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
+	}
 	connections := list.New()
 	if err != nil {
 		panic(err)
 	}
 	com := make(chan Packet)   //Channel for incoming messages
 	parse := make(chan Packet) //Channel for parsed messages to be sent
+	log.Print("server: listening")
 	go MessageWriter(parse, connections)
 	go MessageHandler(com, parse)
 	for {
-		fmt.Println("waiting for connection")
-		con, err := ln.AcceptTCP()
-		fmt.Println("connection made, checking...")
+		conn, err := listener.Accept()
 		if err != nil {
-			continue
+			log.Printf("server: accept: %s", err)
+			break
 		}
-		connections.PushBack(con)
-		go HandleClient(con, com) //Asynchronously listen to the connection
+		defer conn.Close()
+		log.Printf("server: accepted from %s", conn.RemoteAddr())
+		tlscon, ok := conn.(*tls.Conn)
+		if ok {
+			log.Print("ok=true")
+			state := tlscon.ConnectionState()
+			for _, v := range state.PeerCertificates {
+				log.Print(x509.MarshalPKIXPublicKey(v.PublicKey))
+			}
+		}
+		connections.PushBack(conn)
+		go HandleClient(conn, com) //Asynchronously listen to the connection
 	}
-
 }
