@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"code.google.com/p/go.crypto/scrypt"
 	"net"
 )
 
