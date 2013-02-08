@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	tQuit	 = 0
+	tQuit    = 0
 	tMessage = 1
 	tCommand = 2
-	tLogin	 = 3
+	tLogin   = 3
 )
 
 type Packet struct {

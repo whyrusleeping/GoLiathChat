@@ -1,19 +1,25 @@
 package main
 
 import (
-	"net"
 	"bytes"
-	"encoding/binary"
 	"crypto/rand"
+	"encoding/binary"
+	"net"
 )
 
-func ReadInt32(c *net.TCPConn) int32 {
+func ReadInt32(c net.Conn) int32 {
 	var r int32
 	buf := make([]byte, 4)
 	c.Read(buf)
 	obuf := bytes.NewBuffer(buf)
 	binary.Read(obuf, binary.LittleEndian, &r)
 	return r
+}
+
+func BytesFromInt32(i int32) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, i)
+	return buf.Bytes()
 }
 
 func GeneratePepper() []byte {

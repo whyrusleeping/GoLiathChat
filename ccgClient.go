@@ -23,7 +23,7 @@ func main() {
 	serv := NewHost()
 	defer serv.Cleanup()
 	err := serv.Connect(hostname)
-	if !serv.Login("username","password") {
+	if !serv.Login("username", "password") {
 		fmt.Println("Login failed... Exiting.")
 		return
 	}

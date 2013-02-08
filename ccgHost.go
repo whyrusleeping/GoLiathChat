@@ -2,20 +2,20 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
-	"crypto/tls"
-	"log"
-	"fmt"
-	"net"
 	"code.google.com/p/go.crypto/scrypt"
+	"crypto/tls"
+	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
 )
 
 //Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
 	con            net.Conn
 	writer, reader chan Packet
-	cert		   tls.Certificate
-	config		   *tls.Config
+	cert           tls.Certificate
+	config         *tls.Config
 }
 
 func NewHost() *Host {
@@ -31,7 +31,7 @@ func NewHost() *Host {
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
-	con, err := tls.Dial("tcp",hostname,h.config)
+	con, err := tls.Dial("tcp", hostname, h.config)
 	if err != nil {
 		return err
 	}
@@ -39,11 +39,11 @@ func (h *Host) Connect(hostname string) error {
 	log.Println("client: connected to: ", h.con.RemoteAddr())
 
 	/*
-	state := con.ConnectionState()
-	for _,v := range state.PeerCertificates {
-		fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
-		fmt.Println(v.Subject)
-	}
+		state := con.ConnectionState()
+		for _,v := range state.PeerCertificates {
+			fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+			fmt.Println(v.Subject)
+		}
 	*/
 
 	h.reader = make(chan Packet)
@@ -72,12 +72,11 @@ func (h *Host) Cleanup() {
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.writer
-		fmt.Println("sending packet:" + p.payload)
 		n, err := h.con.Write(p.getBytes())
 		if err != nil {
-			panic(err)
+			log.Printf("Failed to send message.\n")
+			continue
 		}
-		fmt.Printf("wrote %d bytes.\n", n)
 	}
 }
 
@@ -109,21 +108,34 @@ func (h *Host) readMessages() {
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle string, password string) bool {
+	//Write the usernames length, followed by the username.
+	ulen := BytesFromInt32(int32(len(handle)))
+	h.con.Write(ulen)
+	h.con.Write([]byte(handle))
+
+	//Read the servers challenge
 	sc := make([]byte, 32)
 	h.con.Read(sc)
-	fmt.Println(sc)
+
+	//Generate a response
 	cc := GeneratePepper()
-	combSalt := make([]byte, len(sc) + len(cc))
+	combSalt := make([]byte, len(sc)+len(cc))
 	copy(combSalt, sc)
 	copy(combSalt[len(sc):], cc)
 
-	hashA,_ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
+	//Generate a hash of the password with the challenge and response as salts
+	hashA, _ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
 
+	//write the hash, and the response
 	h.con.Write(hashA)
 	h.con.Write(cc)
 	sr := make([]byte, 32)
+
+	//Read the servers response
 	h.con.Read(sr)
-	srVer,_ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+	srVer, _ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+
+	//and ensure that it is correct
 	ver := true
 	for i := 0; ver && i < 32; i++ {
 		ver = ver && (sr[i] == srVer[i])

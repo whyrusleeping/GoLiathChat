@@ -12,16 +12,16 @@ number of people
 package main
 
 import (
-	"crypto/rand"
 	"bytes"
-	"container/list"
-	"encoding/binary"
-	"fmt"
-	"net"
-	"log"
 	"code.google.com/p/go.crypto/scrypt"
+	"container/list"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
 	"time"
 )
 
@@ -31,25 +31,35 @@ func HandleClient(c net.Conn, outp chan<- Packet) {
 	auth := AuthClient(c)
 	if auth {
 		ListenClient(c, outp)
+	} else {
+		c.Close()
 	}
 }
 
 func AuthClient(c net.Conn) bool {
-	password := "password"
+	//Read the length of the clients username, followed by the username
+	ulen := ReadInt32(c)
+	unamebuf := make([]byte, ulen)
+	c.Read(unamebuf)
+	fmt.Printf("User %s is trying to authenticate.\n", string(unamebuf))
+	password := "password" //default password for now
+
+	//Generate a challenge and send it to the server
 	sc := GeneratePepper()
 	fmt.Println(sc)
 	c.Write(sc)
+
+	//Read the clients password hash and their response to the challenge
 	hashA := make([]byte, 32)
 	cc := make([]byte, 32)
-
 	c.Read(hashA)
 	c.Read(cc)
 
-	combSalt := make([]byte, len(sc) + len(cc))
+	combSalt := make([]byte, len(sc)+len(cc))
 	copy(combSalt, sc)
 	copy(combSalt[len(sc):], cc)
 
-	hashAver,_ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
+	hashAver, _ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
 
 	//Verify keys are the same.
 	ver := true
@@ -61,7 +71,8 @@ func AuthClient(c net.Conn) bool {
 		return false
 	}
 
-	sr,_ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+	//Generate a response to the client
+	sr, _ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
 	c.Write(sr)
 
 	fmt.Println("Authenticated!")
@@ -156,7 +167,7 @@ func main() {
 		}
 		defer conn.Close()
 		log.Printf("server: accepted from %s", conn.RemoteAddr())
-		tlscon, ok := conn.(*tls.Conn)
+		tlscon, ok := conn.(*tls.Conn) //Type assertion
 		if ok {
 			log.Print("ok=true")
 			state := tlscon.ConnectionState()
