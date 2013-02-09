@@ -15,39 +15,21 @@ import (
 	"container/list"
 	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
+	//"crypto/x509"
 	"log"
 	"net"
 )
 
-
-//Receives packets parsed from incoming connections and 
-//Processes them, then sends them to be relayed
-func MessageHandler(in <-chan Packet, out chan<- Packet) {
-	messages := *list.New()
-	for {
-		p := <-in
-		//ts := time.Unix(int64(p.timestamp), 0)
-		messages.PushFront(p)
-		out <- p
-	}
+type Server struct {
+	connections *list.List
+	messages	*list.List
+	listener	net.Listener
+	com		chan Packet 
+	parse  chan Packet
 }
 
-//Receives packets and sends them to each connection in the list
-func MessageWriter(in <-chan Packet, connections *list.List) {
-	for {
-		p := <-in
-
-		//for now, just write the packets back.
-		for i := connections.Front(); i != nil; i = i.Next() {
-			_, err := i.Value.(net.Conn).Write(p.getBytes())
-			if err != nil {
-			}
-		}
-	}
-}
-
-func main() {
+func StartServer() *Server {
+	s := Server{}
 	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
@@ -56,36 +38,73 @@ func main() {
 	config.Rand = rand.Reader
 	service := "127.0.0.1:10234"
 	listener, err := tls.Listen("tcp", service, &config)
+	s.listener = listener
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}
-	connections := list.New()
+	s.connections = list.New()
 	if err != nil {
 		panic(err)
 	}
-	com := make(chan Packet)   //Channel for incoming messages
-	parse := make(chan Packet) //Channel for parsed messages to be sent
+	s.com = make(chan Packet)   //Channel for incoming messages
+	s.parse = make(chan Packet) //Channel for parsed messages to be sent
+	return &s
+}
+
+func (s *Server) Listen() {
 	log.Print("server: listening")
-	go MessageWriter(parse, connections)
-	go MessageHandler(com, parse)
+	go s.MessageWriter()
+	go s.MessageHandler()
 	for {
-		conn, err := listener.Accept()
+		conn, err := s.listener.Accept()
 		if err != nil {
 			log.Printf("server: accept: %s", err)
 			break
 		}
 		defer conn.Close()
 		log.Printf("server: accepted from %s", conn.RemoteAddr())
-		tlscon, ok := conn.(*tls.Conn) //Type assertion
+		_, ok := conn.(*tls.Conn) //Type assertion
 		if ok {
 			log.Print("ok=true")
-			state := tlscon.ConnectionState()
+			/*state := tlscon.ConnectionState()
 			for _, v := range state.PeerCertificates {
 				log.Print(x509.MarshalPKIXPublicKey(v.PublicKey))
+			}*/
+		}
+		s.connections.PushBack(conn)
+		u := UserWithConn(conn)
+		go u.Handle(s.com) //Asynchronously listen to the connection
+	}
+}
+
+//Receives packets parsed from incoming connections and 
+//Processes them, then sends them to be relayed
+func (s *Server) MessageHandler() {
+	messages := *list.New()
+	for {
+		p := <-s.com
+		//ts := time.Unix(int64(p.timestamp), 0)
+		messages.PushFront(p)
+		s.parse <- p
+	}
+}
+
+//Receives and parses packets and then sends them to each connection in the list
+//This is where any information requested is given
+func (s *Server) MessageWriter() {
+	for {
+		p := <-s.parse
+
+		//for now, just write the packets back.
+		for i := s.connections.Front(); i != nil; i = i.Next() {
+			_, err := i.Value.(net.Conn).Write(p.getBytes())
+			if err != nil {
 			}
 		}
-		connections.PushBack(conn)
-		u := UserWithConn(conn)
-		go u.Handle(com) //Asynchronously listen to the connection
 	}
+}
+
+func main() {
+	s := StartServer()
+	s.Listen()
 }

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -81,33 +79,11 @@ func (h *Host) writeMessages() {
 }
 
 func (h *Host) readMessages() {
-	flagBuf := make([]byte, 1)
-	lenBuf := make([]byte, 2)
-	timeBuf := make([]byte, 4)
 	for {
-		flagBuf[0] = 0
-		//Need to check connectivity to see if a disconnect has happened
-		p := Packet{}
-		_, err := h.conn.Read(flagBuf)
+		p,err := ReadPacket(h.conn)
 		if err != nil {
 			panic(err)
 		}
-		p.typ = flagBuf[0] //Packet is just one byte
-		h.conn.Read(timeBuf)
-		buf := bytes.NewBuffer(timeBuf)
-		binary.Read(buf, binary.LittleEndian, &p.timestamp)
-		h.conn.Read(lenBuf)
-		buf = bytes.NewBuffer(lenBuf)
-		binary.Read(buf, binary.LittleEndian, &p.userLen)
-		userBuf := make([]byte, p.userLen)
-		h.conn.Read(userBuf)
-		p.username = string(userBuf)
-		h.conn.Read(lenBuf)
-		buf = bytes.NewBuffer(lenBuf)
-		binary.Read(buf, binary.LittleEndian, &p.mesLen)
-		strBuf := make([]byte, p.mesLen)
-		h.conn.Read(strBuf)
-		p.payload = string(strBuf)
 		h.reader <- p
 	}
 }
