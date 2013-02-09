@@ -21,11 +21,11 @@ import (
 )
 
 type Server struct {
-	connections *list.List
-	messages	*list.List
-	listener	net.Listener
-	com		chan Packet 
-	parse  chan Packet
+	users    *list.List
+	messages *list.List
+	listener net.Listener
+	com      chan Packet
+	parse    chan Packet
 }
 
 func StartServer() *Server {
@@ -42,7 +42,7 @@ func StartServer() *Server {
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}
-	s.connections = list.New()
+	s.users = list.New()
 	if err != nil {
 		panic(err)
 	}
@@ -71,13 +71,13 @@ func (s *Server) Listen() {
 				log.Print(x509.MarshalPKIXPublicKey(v.PublicKey))
 			}*/
 		}
-		s.connections.PushBack(conn)
 		u := UserWithConn(conn)
+		s.users.PushBack(u)
 		go u.Handle(s.com) //Asynchronously listen to the connection
 	}
 }
 
-//Receives packets parsed from incoming connections and 
+//Receives packets parsed from incoming users and 
 //Processes them, then sends them to be relayed
 func (s *Server) MessageHandler() {
 	messages := *list.New()
@@ -96,8 +96,8 @@ func (s *Server) MessageWriter() {
 		p := <-s.parse
 
 		//for now, just write the packets back.
-		for i := s.connections.Front(); i != nil; i = i.Next() {
-			_, err := i.Value.(net.Conn).Write(p.getBytes())
+		for i := s.users.Front(); i != nil; i = i.Next() {
+			_, err := i.Value.(*User).conn.Write(p.getBytes())
 			if err != nil {
 			}
 		}

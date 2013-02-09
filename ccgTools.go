@@ -35,6 +35,17 @@ func BytesFromShortString(s string) []byte {
 	return buf.Bytes()
 }
 
+func ReadShortString(c net.Conn) string {
+	l := make([]byte, 2)
+	c.Read(l)
+	var r uint16
+	buf := bytes.NewBuffer(l)
+	binary.Read(buf, binary.LittleEndian, &r)
+	str := make([]byte, r)
+	c.Read(str)
+	return string(str)
+}
+
 func BytesFromLongString(s string) []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, uint32(len(s)))
@@ -53,4 +64,16 @@ func GeneratePepper() []byte {
 func HashPassword(password string) []byte {
 	pHash,_ := scrypt.Key([]byte(password), []byte(tSalt), 2^17, 19, 103, 32)
 	return pHash
+}
+
+func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
+	if len(pHash) != 32 {
+		return nil
+	}
+	buf :=  new(bytes.Buffer)
+	buf.Write([]byte("["))
+	buf.Write([]byte(u.username))
+	buf.Write([]byte("]"))
+	buf.Write(pHash)
+	return buf.Bytes()
 }

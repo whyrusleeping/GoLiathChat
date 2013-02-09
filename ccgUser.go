@@ -32,7 +32,12 @@ func (u *User) Handle(outp chan<- Packet) {
 			u.conn.Close()
 		}
 	} else if checkByte[0] == tRegister {
-		//Do registration
+		uname := ReadShortString(u.conn)
+		key := make([]byte,32)
+		u.conn.Read(key)
+		log.Printf("%s wishes to register.\n", uname)
+		//Either wait for authentication, or tell user to reconnect after the registration is complete..
+		//Not quite sure how to handle this
 	} else {
 		u.conn.Close()
 	}
