@@ -108,6 +108,7 @@ func (h *Host) readMessages() {
 
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle string, password string) bool {
+	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.
 	ulen := BytesFromInt32(int32(len(handle)))
 	h.con.Write(ulen)
@@ -124,7 +125,7 @@ func (h *Host) Login(handle string, password string) bool {
 	copy(combSalt[len(sc):], cc)
 
 	//Generate a hash of the password with the challenge and response as salts
-	hashA, _ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
+	hashA, _ := scrypt.Key(iPassHash, combSalt, 16384, 8, 1, 32)
 
 	//write the hash, and the response
 	h.con.Write(hashA)
@@ -133,7 +134,7 @@ func (h *Host) Login(handle string, password string) bool {
 
 	//Read the servers response
 	h.con.Read(sr)
-	srVer, _ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
+	srVer, _ := scrypt.Key(iPassHash, combSalt, 32768, 4, 7, 32)
 
 	//and ensure that it is correct
 	ver := true

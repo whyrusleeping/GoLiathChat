@@ -12,105 +12,16 @@ number of people
 package main
 
 import (
-	"bytes"
-	"code.google.com/p/go.crypto/scrypt"
 	"container/list"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
 	"time"
 )
 
-func HandleClient(c net.Conn, outp chan<- Packet) {
-	//Authenticate the client, then pass to ListenClient
-	fmt.Println("New connection!")
-	auth := AuthClient(c)
-	if auth {
-		ListenClient(c, outp)
-	} else {
-		c.Close()
-	}
-}
-
-func AuthClient(c net.Conn) bool {
-	//Read the length of the clients username, followed by the username
-	ulen := ReadInt32(c)
-	unamebuf := make([]byte, ulen)
-	c.Read(unamebuf)
-	fmt.Printf("User %s is trying to authenticate.\n", string(unamebuf))
-	password := "password" //default password for now
-
-	//Generate a challenge and send it to the server
-	sc := GeneratePepper()
-	fmt.Println(sc)
-	c.Write(sc)
-
-	//Read the clients password hash and their response to the challenge
-	hashA := make([]byte, 32)
-	cc := make([]byte, 32)
-	c.Read(hashA)
-	c.Read(cc)
-
-	combSalt := make([]byte, len(sc)+len(cc))
-	copy(combSalt, sc)
-	copy(combSalt[len(sc):], cc)
-
-	hashAver, _ := scrypt.Key([]byte(password), combSalt, 16384, 8, 1, 32)
-
-	//Verify keys are the same.
-	ver := true
-	for i := 0; ver && i < len(hashA); i++ {
-		ver = ver && (hashA[i] == hashAver[i])
-	}
-	if !ver {
-		fmt.Println("Invalid Authentication")
-		return false
-	}
-
-	//Generate a response to the client
-	sr, _ := scrypt.Key([]byte(password), combSalt, 32768, 4, 7, 32)
-	c.Write(sr)
-
-	fmt.Println("Authenticated!")
-	return true
-}
-
-//This function receives message packets from the given TCPConn-ection, parses them,
-//and writes them to the output channel
-func ListenClient(c net.Conn, outp chan<- Packet) {
-	flagBuf := make([]byte, 1)
-	lenBuf := make([]byte, 2)
-	timeBuf := make([]byte, 4)
-
-	for {
-		p := Packet{}
-		flagBuf[0] = 0
-		c.Read(flagBuf)
-		p.typ = flagBuf[0] //Packet type is just one byte
-		if p.typ == tQuit {
-			c.Close()
-			fmt.Println("Client disconnected.")
-			break
-		}
-		c.Read(timeBuf)
-		buf := bytes.NewBuffer(timeBuf)
-		err := binary.Read(buf, binary.LittleEndian, &p.timestamp)
-		if err != nil {
-			panic(err)
-		}
-		c.Read(lenBuf)
-		buf = bytes.NewBuffer(lenBuf)
-		binary.Read(buf, binary.LittleEndian, &p.mesLen)
-		strBuf := make([]byte, p.mesLen)
-		c.Read(strBuf)
-		p.payload = string(strBuf)
-		outp <- p
-	}
-}
 
 //Receives packets parsed from incoming connections and 
 //Processes them, then sends them to be relayed
@@ -176,6 +87,7 @@ func main() {
 			}
 		}
 		connections.PushBack(conn)
-		go HandleClient(conn, com) //Asynchronously listen to the connection
+		u := UserWithConn(conn)
+		go u.Handle(com) //Asynchronously listen to the connection
 	}
 }
