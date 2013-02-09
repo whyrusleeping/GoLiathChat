@@ -16,21 +16,19 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"log"
 	"net"
-	"time"
 )
 
 
 //Receives packets parsed from incoming connections and 
 //Processes them, then sends them to be relayed
 func MessageHandler(in <-chan Packet, out chan<- Packet) {
+	messages := *list.New()
 	for {
 		p := <-in
-		ts := time.Unix(int64(p.timestamp), 0)
-		fmt.Println(ts.Format(time.Stamp) + "Received:" + p.payload)
-		fmt.Println(p.typ)
+		//ts := time.Unix(int64(p.timestamp), 0)
+		messages.PushFront(p)
 		out <- p
 	}
 }

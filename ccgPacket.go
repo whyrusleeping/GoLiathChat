@@ -15,6 +15,7 @@ const (
 	tFile    = 5
 	tRegister= 6
 	tInfo	 = 7
+	tHistory = 8
 )
 
 type Packet struct {

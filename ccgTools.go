@@ -8,6 +8,9 @@ import (
 	"net"
 )
 
+//Awesome salt thanks to travis lane.
+var tSalt = "brownchocolatemoosecoffeelatte"
+
 func ReadInt32(c net.Conn) int32 {
 	var r int32
 	buf := make([]byte, 4)
@@ -23,6 +26,24 @@ func BytesFromInt32(i int32) []byte {
 	return buf.Bytes()
 }
 
+func BytesFromShortString(s string) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint16(len(s)))
+	for _, c := range s {
+		binary.Write(buf, binary.LittleEndian, byte(c))
+	}
+	return buf.Bytes()
+}
+
+func BytesFromLongString(s string) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint32(len(s)))
+	for _, c := range s {
+		binary.Write(buf, binary.LittleEndian, byte(c))
+	}
+	return buf.Bytes()
+}
+
 func GeneratePepper() []byte {
 	pep := make([]byte, 32)
 	rand.Reader.Read(pep)
@@ -30,7 +51,6 @@ func GeneratePepper() []byte {
 }
 
 func HashPassword(password string) []byte {
-	salt := "brownchocolatemoosecoffeelatte"
-	pHash,_ := scrypt.Key([]byte(password), []byte(salt), 2^17, 19, 103, 32)
+	pHash,_ := scrypt.Key([]byte(password), []byte(tSalt), 2^17, 19, 103, 32)
 	return pHash
 }

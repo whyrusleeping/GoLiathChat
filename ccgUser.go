@@ -24,9 +24,17 @@ func (u *User) Handle(outp chan<- Packet) {
 	//Authenticate the client, then pass to ListenClient
 	fmt.Println("New connection!")
 	u.outp = outp
-	auth := u.Auth()
-	if auth {
-		u.Listen()
+	checkByte := make([]byte, 1)
+	u.conn.Read(checkByte)
+	if checkByte[0] == tLogin {
+		auth := u.Auth()
+		if auth {
+			u.Listen()
+		} else {
+			u.conn.Close()
+		}
+	} else if checkByte[0] == tRegister {
+		//Do registration
 	} else {
 		u.conn.Close()
 	}

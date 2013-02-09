@@ -12,7 +12,7 @@ import (
 
 //Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
-	con            net.Conn
+	conn            net.Conn
 	writer, reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
@@ -31,15 +31,15 @@ func NewHost() *Host {
 
 //Connect to the given host and returns any error
 func (h *Host) Connect(hostname string) error {
-	con, err := tls.Dial("tcp", hostname, h.config)
+	conn, err := tls.Dial("tcp", hostname, h.config)
 	if err != nil {
 		return err
 	}
-	h.con = con
-	log.Println("client: connected to: ", h.con.RemoteAddr())
+	h.conn = conn
+	log.Println("client: connected to: ", h.conn.RemoteAddr())
 
 	/*
-		state := con.ConnectionState()
+		state := conn.ConnectionState()
 		for _,v := range state.PeerCertificates {
 			fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
 			fmt.Println(v.Subject)
@@ -64,15 +64,15 @@ func (h *Host) Send(message string) {
 }
 
 func (h *Host) Cleanup() {
-	if h.con != nil {
-		h.con.Close()
+	if h.conn != nil {
+		h.conn.Close()
 	}
 }
 
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.writer
-		_, err := h.con.Write(p.getBytes())
+		_, err := h.conn.Write(p.getBytes())
 		if err != nil {
 			log.Printf("Failed to send message.\n")
 			continue
@@ -88,41 +88,55 @@ func (h *Host) readMessages() {
 		flagBuf[0] = 0
 		//Need to check connectivity to see if a disconnect has happened
 		p := Packet{}
-		_, err := h.con.Read(flagBuf)
+		_, err := h.conn.Read(flagBuf)
 		if err != nil {
 			panic(err)
 		}
 		p.typ = flagBuf[0] //Packet is just one byte
-		h.con.Read(timeBuf)
+		h.conn.Read(timeBuf)
 		buf := bytes.NewBuffer(timeBuf)
 		binary.Read(buf, binary.LittleEndian, &p.timestamp)
-		h.con.Read(lenBuf)
+		h.conn.Read(lenBuf)
 		buf = bytes.NewBuffer(lenBuf)
 		binary.Read(buf, binary.LittleEndian, &p.userLen)
 		userBuf := make([]byte, p.userLen)
-		h.con.Read(userBuf)
+		h.conn.Read(userBuf)
 		p.username = string(userBuf)
-		h.con.Read(lenBuf)
+		h.conn.Read(lenBuf)
 		buf = bytes.NewBuffer(lenBuf)
 		binary.Read(buf, binary.LittleEndian, &p.mesLen)
 		strBuf := make([]byte, p.mesLen)
-		h.con.Read(strBuf)
+		h.conn.Read(strBuf)
 		p.payload = string(strBuf)
 		h.reader <- p
 	}
 }
 
+func (h *Host) Register(handle, password string) {
+	registerByte := make([]byte, 1)
+	registerByte[0] = tRegister
+	h.conn.Write(registerByte)
+	h.conn.Write(BytesFromShortString(handle))
+	phash := HashPassword(password)
+	h.conn.Write(phash)
+	//Now do one of two things, either wait for a response to allow access to the server
+	//Or, close the connection, and retry when the registration has been completed
+}
+
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle string, password string) bool {
+func (h *Host) Login(handle, password string) bool {
+	loginByte := make([]byte, 1)
+	loginByte[0] = tLogin
+	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.
 	ulen := BytesFromInt32(int32(len(handle)))
-	h.con.Write(ulen)
-	h.con.Write([]byte(handle))
+	h.conn.Write(ulen)
+	h.conn.Write([]byte(handle))
 
 	//Read the servers challenge
 	sc := make([]byte, 32)
-	h.con.Read(sc)
+	h.conn.Read(sc)
 
 	//Generate a response
 	cc := GeneratePepper()
@@ -134,12 +148,12 @@ func (h *Host) Login(handle string, password string) bool {
 	hashA, _ := scrypt.Key(iPassHash, combSalt, 16384, 8, 1, 32)
 
 	//write the hash, and the response
-	h.con.Write(hashA)
-	h.con.Write(cc)
+	h.conn.Write(hashA)
+	h.conn.Write(cc)
 	sr := make([]byte, 32)
 
 	//Read the servers response
-	h.con.Read(sr)
+	h.conn.Read(sr)
 	srVer, _ := scrypt.Key(iPassHash, combSalt, 32768, 4, 7, 32)
 
 	//and ensure that it is correct
