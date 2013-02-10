@@ -123,7 +123,7 @@ func main() {
 				panic(keyEvent.Err)
 			}
 		case serverEvent := <-serv.reader:
-      message := MessageObject{serverEvent.payload, "default", time.Now().Second()}
+      message := MessageObject{string(serverEvent.payload), "default", time.Now().Second()}
 			messages.PushFront(message)
 			clear()
 		  displayWindow(input, messages, start_message)
@@ -132,7 +132,6 @@ func main() {
 	}
 
 	//Sleep to ensure final messages get sent
-	
 }
 
 func keyboardEventPoller(event chan<- termbox.Event) {

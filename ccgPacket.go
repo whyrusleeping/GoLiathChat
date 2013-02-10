@@ -17,31 +17,24 @@ const (
 	tRegister= 6
 	tInfo	 = 7
 	tHistory = 8
+	tAccept  = 9
 )
 
 type Packet struct {
 	typ       byte
 	timestamp int32
-	userLen	  uint16
 	username  string
-	payLen    uint32
-	payload   string
+	payload   []byte
 }
 
 func (p Packet) getBytes() []byte {
 	buf := new(bytes.Buffer)
-	p.payLen = uint32(len(p.payload))
-	p.userLen = uint16(len(p.username))
 	binary.Write(buf, binary.LittleEndian, p.typ)
 	binary.Write(buf, binary.LittleEndian, int32(p.timestamp))
-	binary.Write(buf, binary.LittleEndian, p.userLen)
-	for _, c := range p.username {
-		binary.Write(buf, binary.LittleEndian, byte(c))
-	}
-	binary.Write(buf, binary.LittleEndian, p.payLen)
-	for _, c := range p.payload {
-		binary.Write(buf, binary.LittleEndian, byte(c))
-	}
+	binary.Write(buf, binary.LittleEndian, uint16(len(p.username)))
+	binary.Write(buf, binary.LittleEndian, []byte(p.username))
+	binary.Write(buf, binary.LittleEndian, uint32(len(p.payload)))
+	binary.Write(buf, binary.LittleEndian, p.payload)
 	return buf.Bytes()
 }
 
@@ -49,6 +42,8 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	flagBuf := make([]byte, 1)
 	lenBuf := make([]byte, 2)
 	timeBuf := make([]byte, 4)
+	var userLen uint16
+	var payLen uint32
 	//Need to check connectivity to see if a disconnect has happened
 	p := Packet{}
 	_, err := conn.Read(flagBuf)
@@ -61,16 +56,16 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	binary.Read(buf, binary.LittleEndian, &p.timestamp)
 	conn.Read(lenBuf)
 	buf = bytes.NewBuffer(lenBuf)
-	binary.Read(buf, binary.LittleEndian, &p.userLen)
-	userBuf := make([]byte, p.userLen)
+	binary.Read(buf, binary.LittleEndian, &userLen)
+	userBuf := make([]byte, userLen)
 	conn.Read(userBuf)
 	p.username = string(userBuf)
 	conn.Read(timeBuf)
 	buf = bytes.NewBuffer(timeBuf)
-	binary.Read(buf, binary.LittleEndian, &p.payLen)
-	strBuf := make([]byte, p.payLen)
+	binary.Read(buf, binary.LittleEndian, &payLen)
+	strBuf := make([]byte, payLen)
 	conn.Read(strBuf)
-	p.payload = string(strBuf)
+	p.payload = strBuf
 	return p, nil
 }
 
@@ -78,6 +73,6 @@ func NewPacket(mtype byte, payload string) Packet {
 	p := Packet{}
 	p.typ = mtype
 	p.timestamp = int32(time.Now().Unix())
-	p.payload = payload
+	p.payload = []byte(payload)
 	return p
 }

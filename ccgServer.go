@@ -91,7 +91,7 @@ func (s *Server) MessageHandler() {
 				s.parse <- p
 			case tRegister:
 				s.regReqs[p.username] = []byte(p.payload)
-				p.payload = fmt.Sprintf("%s requests authentication.")
+				p.payload = []byte(fmt.Sprintf("%s requests authentication."))
 				s.parse <- p
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
