@@ -83,6 +83,10 @@ func (u *User) Auth() bool {
 	sr, _ := scrypt.Key(password, combSalt, 32768, 4, 7, 32)
 	u.conn.Write(sr)
 
+	//Read login flags
+	lflags := make([]byte, 1)
+	u.conn.Read(lflags)
+
 	log.Println("Authenticated!")
 	return true
 }

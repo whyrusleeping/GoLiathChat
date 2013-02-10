@@ -8,6 +8,12 @@ import (
 	"net"
 )
 
+//Login Flags
+const (
+	fAnon		= 1 << 0
+	fInvisible  = 1 << 1
+)
+
 //Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
 	conn            net.Conn
@@ -100,7 +106,7 @@ func (h *Host) Register(handle, password string) {
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle, password string) bool {
+func (h *Host) Login(handle, password string, lflags byte) bool {
 	loginByte := make([]byte, 1)
 	loginByte[0] = tLogin
 	h.conn.Write(loginByte)
@@ -141,6 +147,9 @@ func (h *Host) Login(handle, password string) bool {
 		fmt.Println("Invalid response from server, authentication failed.")
 		return false
 	}
+
+	loginByte[0] = lflags
+	h.conn.Write(loginByte)
 
 	fmt.Println("Authenticated!")
 	return true

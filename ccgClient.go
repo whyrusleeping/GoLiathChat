@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if !serv.Login("username", "password") {
+	if !serv.Login("username", "password",0) {
 		fmt.Println("Login failed... Exiting.")
 		return
 	}
