@@ -12,10 +12,9 @@ Go Command Chat
 package main
 
 import (
-	"fmt"
+	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
-	"container/list"
 )
 
 type MessageObject struct {
@@ -34,38 +33,139 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if !serv.Login("username", "password") {
-		fmt.Println("Login failed... Exiting.")
-		return
-	}
-	serv.Start()
-	/* Initialization Complete */
-
+	/* Initialize Termbox */
 	termErr := termbox.Init()
 	if termErr != nil {
 		panic(termErr)
 	}
 	defer termbox.Close()
 
-	//Setup the variables
+  quit := false
+  loggedin := false
+	/* Login to server */
+	for !quit {
+	  quit, loggedin = displayLoginWindow(serv)
+	}
+	
+  if loggedin {
+    // Start the server
+    serv.Start()
+	  // Display the login window
+	  displayChatWindow(serv)
+	  quit = true;
+	}
+}
+
+func displayLoginWindow(serv *Host) (bool, bool) {
+	quit := false
+	login := false
+	
+	name := ""
+	pass := ""
+	box := 0  // 0 Username 1 Password 2 Options
+	cursor := 0
+	//login_message := ""
+	keyboard := make(chan termbox.Event)
+	
+	// Start the goroutines
+	go keyboardEventPoller(keyboard)
+	
+	
+	for !quit && !login{
+		select {
+		case keyEvent := <-keyboard:
+			switch keyEvent.Type {
+			case termbox.EventKey:
+							// Safe Exit (Waits for last message to send)
+				if keyEvent.Key == termbox.KeyCtrlQ {
+					clear()
+					message_us("Exiting...")
+					flush()
+					time.Sleep(time.Second * 2)
+					quit = true
+					login = false
+					break
+					// Unsafe Exit (Does not wait)
+				} else if keyEvent.Key == termbox.KeyCtrlC {
+					clear()
+					flush()
+					quit = true
+					login = false
+					break
+				} else if keyEvent.Key == termbox.KeyEnter {
+					// If a box is empty, say no.
+					if box == 0 {
+					  box = 1
+					} else if box == 1 {
+					  if name == "" {
+					    err := "Username can not be blank."
+					    updateLoginWindow(name , pass , box , cursor , err) 
+					  } else if pass == "" {
+					    err := "Password can not be blank."
+					    updateLoginWindow(name , pass , box , cursor , err) 
+					  } else {
+					    login, _ = serv.Login("username", "password")
+					  }
+					
+					}
+				} else if keyEvent.Key == termbox.KeyBackspace {
+					// REemove a ch
+				} else if keyEvent.Key == termbox.KeyBackspace2 {
+					// Remove a ch
+				} else if keyEvent.Key == termbox.KeyArrowUp {
+					// Move up a box
+				} else if keyEvent.Key == termbox.KeyArrowDown {
+				  // Move down a box
+				} else if keyEvent.Key == termbox.KeyArrowRight {
+					// Update the cursor position
+				} else if keyEvent.Key == termbox.KeyArrowLeft {
+					// Update the cursor position
+				} else if keyEvent.Key == termbox.KeySpace {
+				
+				} else {
+				
+				}
+			
+	    case termbox.EventResize:
+
+		  case termbox.EventError:
+			  panic(keyEvent.Err)
+			}
+		}	
+	}
+  login, _ = serv.Login("username", "password")
+	
+	return quit, login
+}
+
+// Update the login window
+func updateLoginWindow(name string, pass string, box int, cursor int, err string) {
+
+
+}
+
+// Displays the chat window
+func displayChatWindow(serv *Host) {
+
+	// Setup the variables
 	input := ""
 	running := true
 	start_message := 0
 	messages := list.New()
 	keyboard := make(chan termbox.Event)
-	//Display the window
+	// Display the window
 	clear()
-	displayWindow(input, messages, start_message)
+	updateChatWindow(input, messages, start_message)
 	flush()
-
+	// Start the goroutines
 	go keyboardEventPoller(keyboard)
-	//Start the goroutines
+	// Run the main loop
 	for running {
 		select {
 		case keyEvent := <-keyboard:
 			switch keyEvent.Type {
 			case termbox.EventKey:
-			  // Safe Exit (Waits for last message to send)
+				// Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
 					clear()
 					message_us("Exiting...")
@@ -73,7 +173,7 @@ func main() {
 					time.Sleep(time.Second * 2)
 					running = false
 					break
-				// Unsafe Exit (Does not wait)
+					// Unsafe Exit (Does not wait)
 				} else if keyEvent.Key == termbox.KeyCtrlC {
 					clear()
 					flush()
@@ -113,28 +213,26 @@ func main() {
 					}
 				}
 				clear()
-				displayWindow(input, messages, start_message)
+				updateChatWindow(input, messages, start_message)
 				flush()
 			case termbox.EventResize:
-			  clear()
-				displayWindow(input, messages, start_message)
+				clear()
+				updateChatWindow(input, messages, start_message)
 				flush()
 			case termbox.EventError:
 				panic(keyEvent.Err)
 			}
 		case serverEvent := <-serv.reader:
-      message := MessageObject{serverEvent.payload, "default", time.Now().Second()}
+			message := MessageObject{serverEvent.payload, "default", time.Now().Second()}
 			messages.PushFront(message)
 			clear()
-		  displayWindow(input, messages, start_message)
+			updateChatWindow(input, messages, start_message)
 			flush()
 		}
 	}
-
-	//Sleep to ensure final messages get sent
-	
 }
 
+// Polls for keyboard events
 func keyboardEventPoller(event chan<- termbox.Event) {
 	for {
 		event <- termbox.PollEvent()
@@ -142,7 +240,7 @@ func keyboardEventPoller(event chan<- termbox.Event) {
 }
 
 //Updates the chat
-func displayWindow(input string, messages *list.List, start_message int) {
+func updateChatWindow(input string, messages *list.List, start_message int) {
 
 	x, y := termbox.Size()
 	if x != 0 && y != 0 {
@@ -151,6 +249,7 @@ func displayWindow(input string, messages *list.List, start_message int) {
 	}
 }
 
+// Displays the chat messages
 func displayMessages(messages *list.List, offset int, input_top int) {
 	line_cursor := input_top
 	sx, sy := termbox.Size()
@@ -164,17 +263,28 @@ func displayMessages(messages *list.List, offset int, input_top int) {
 
 		cur := p.Value.(MessageObject)
 		lines := getLines(cur.message, sx)
-		fill_h("-", 0, sy-line_cursor, sx)
+		//fill_h("-", 0, sy-line_cursor, sx)
 
 		line_cursor += 1
 		for i := len(lines) - 1; i >= 0; i-- {
 			write(0, sy-line_cursor, lines[i])
 			line_cursor += 1
 		}
-		fill_h("-", 0, sy-line_cursor, sx)
+		if p.Next() != nil {
+			if p.Next().Value.(MessageObject).sender == cur.sender {
+				line_cursor -= 1
+			} else {
+				write(0, sy-line_cursor, cur.sender)
+				fill_h("-", len(cur.sender), sy-line_cursor, sx)
+			}
+		} else {
+			write(0, sy-line_cursor, cur.sender)
+			fill_h("-", len(cur.sender), sy-line_cursor, sx)
+		}
 	}
 }
 
+// Displays the chat input
 func displayInput(input string) int {
 	sx, sy := termbox.Size()
 	line_cursor := 1
@@ -195,4 +305,3 @@ func displayInput(input string) int {
 	}
 	return 1
 }
-
