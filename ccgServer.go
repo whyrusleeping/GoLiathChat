@@ -17,12 +17,14 @@ import (
 	"crypto/tls"
 	//"crypto/x509"
 	"log"
+	"fmt"
 	"net"
 )
 
 type Server struct {
 	users    *list.List
 	messages *list.List
+	regReqs  map[string][]byte
 	listener net.Listener
 	com      chan Packet
 	parse    chan Packet
@@ -83,9 +85,16 @@ func (s *Server) MessageHandler() {
 	messages := *list.New()
 	for {
 		p := <-s.com
+		switch p.typ {
+			case tMessage:
+				messages.PushFront(p)
+				s.parse <- p
+			case tRegister:
+				s.regReqs[p.username] = []byte(p.payload)
+				p.payload = fmt.Sprintf("%s requests authentication.")
+				s.parse <- p
+		}
 		//ts := time.Unix(int64(p.timestamp), 0)
-		messages.PushFront(p)
-		s.parse <- p
 	}
 }
 

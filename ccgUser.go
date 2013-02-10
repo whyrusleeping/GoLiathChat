@@ -36,8 +36,11 @@ func (u *User) Handle(outp chan<- Packet) {
 		key := make([]byte,32)
 		u.conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
+		rp := NewPacket(tRegister, uname)
+		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
+
 	} else {
 		u.conn.Close()
 	}
@@ -96,6 +99,7 @@ func (u *User) Auth() bool {
 func (u *User) Listen() {
 	for {
 		p, err := ReadPacket(u.conn)
+		p.username = u.username
 		if err != nil {
 			log.Printf("%s has disconnected.\n", u.username)
 			u.conn.Close()
