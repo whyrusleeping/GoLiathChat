@@ -24,6 +24,7 @@ func (u *User) Handle(outp chan<- Packet) {
 //This function receives message packets from the given TCPConn-ection, parses them,
 //and writes them to the output channel
 func (u *User) Listen() {
+	//Start HERE
 	for {
 		p, err := ReadPacket(u.conn)
 		p.username = u.username
