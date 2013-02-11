@@ -17,14 +17,9 @@ func UserWithConn(conn net.Conn) *User {
 	return &u
 }
 
-func (u *User) Handle(outp chan<- Packet) {
-	//Authenticate the client, then pass to ListenClient
-}
-
 //This function receives message packets from the given TCPConn-ection, parses them,
 //and writes them to the output channel
 func (u *User) Listen() {
-	//Start HERE
 	for {
 		p, err := ReadPacket(u.conn)
 		log.Printf("Received Packet from %s\n", u.username)

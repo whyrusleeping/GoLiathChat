@@ -16,6 +16,8 @@ import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/rand"
 	"crypto/tls"
+	"bytes"
+	"os"
 	"log"
 	"fmt"
 	"net"
@@ -183,6 +185,8 @@ func (s *Server) MessageHandler() {
 			s.regReqs[p.username] = []byte(p.payload)
 			p.payload = []byte(fmt.Sprintf("%s requests authentication."))
 			s.parse <- p
+		case tAccept:
+			//add the specified user to the user list
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}
@@ -201,6 +205,21 @@ func (s *Server) MessageWriter() {
 			}
 		}
 	}
+}
+
+func (s *Server) loadUserList(filename string) {
+
+}
+
+func (s *Server) saveUserList(filename string) {
+	wrbuf := new(bytes.Buffer)
+	for name, phash := range s.PassHashes {
+		wrbuf.Write(BytesFromShortString(name))
+		wrbuf.Write(phash)
+	}
+	f,_ := os.Create(filename)
+	f.Write(wrbuf.Bytes())
+	f.Close()
 }
 
 func main() {
