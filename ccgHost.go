@@ -5,7 +5,6 @@ import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"net"
 )
@@ -113,7 +112,7 @@ func (h *Host) readMessages() {
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle string, password string) bool {
+func (h *Host) Login(handle string, password string) (bool, string) {
 	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.
 	ulen := BytesFromInt32(int32(len(handle)))
@@ -148,10 +147,7 @@ func (h *Host) Login(handle string, password string) bool {
 		ver = ver && (sr[i] == srVer[i])
 	}
 	if !ver {
-		fmt.Println("Invalid response from server, authentication failed.")
-		return false
+		return false, "Invalid responce from server"
 	}
-
-	fmt.Println("Authenticated!")
-	return true
+	return true, "Authenticated"
 }
