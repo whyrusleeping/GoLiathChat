@@ -42,12 +42,13 @@ func main() {
 
   quit := false
   loggedin := false
-	/* Login to server */
+	/* Login to server 
 	for !quit {
 	  quit, loggedin = displayLoginWindow(serv)
 	}
-	
-  if loggedin {
+	*/
+  loggedin,_ = serv.Login("username", "password")
+  if loggedin && !quit{
     // Start the server
     serv.Start()
 	  // Display the login window
@@ -62,6 +63,7 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 	
 	name := ""
 	pass := ""
+	login_err := ""
 	box := 0  // 0 Username 1 Password 2 Options
 	cursor := 0
 	//login_message := ""
@@ -70,8 +72,7 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 	// Start the goroutines
 	go keyboardEventPoller(keyboard)
 	
-	
-	for !quit && !login{
+	for !quit && !login {
 		select {
 		case keyEvent := <-keyboard:
 			switch keyEvent.Type {
@@ -104,12 +105,18 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 					    err := "Password can not be blank."
 					    updateLoginWindow(name , pass , box , cursor , err) 
 					  } else {
-					    login, _ = serv.Login("username", "password")
+					    login, login_err = serv.Login("username", "password")
 					  }
-					
+					  updateLoginWindow(name, pass, box, cursor, login_err)
 					}
 				} else if keyEvent.Key == termbox.KeyBackspace {
-					// REemove a ch
+				  if box == 0 {         // Name
+				  
+				  } else if box == 1 {  // Password
+				  
+				  
+				  } 
+					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
 					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyArrowUp {
@@ -122,8 +129,10 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 					// Update the cursor position
 				} else if keyEvent.Key == termbox.KeySpace {
 				
-				} else {
+				} else if alpha_num_spec(keyEvent.Ch) {
 				
+				} else {
+				  // do nothing
 				}
 			
 	    case termbox.EventResize:
@@ -133,14 +142,24 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 			}
 		}	
 	}
-  login, _ = serv.Login("username", "password")
+  login, login_err = serv.Login("username", "password")
+  updateLoginWindow(name, pass, box, cursor, login_err)
 	
 	return quit, login
 }
 
 // Update the login window
 func updateLoginWindow(name string, pass string, box int, cursor int, err string) {
-
+  sx, sy := termbox.Size()
+  
+  name_lines := getLines(name, sx-2)
+  //pass_lines := getLines(pass, sx-2)
+  //err_lines := getLines(err, sx-2)
+  
+  
+  write_center((sy/2)-len(name_lines)-1, "Username:")
+  
+  write_center((sy/2)+len(name_lines)+1, "Password:")
 
 }
 
