@@ -3,7 +3,6 @@ package main
 import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net"
 )
@@ -94,19 +93,8 @@ func (h *Host) readMessages() {
 	}
 }
 
-func (h *Host) Register(handle, password string) {
-	registerByte := make([]byte, 1)
-	registerByte[0] = tRegister
-	h.conn.Write(registerByte)
-	h.conn.Write(BytesFromShortString(handle))
-	phash := HashPassword(password)
-	h.conn.Write(phash)
-	//Now do one of two things, either wait for a response to allow access to the server
-	//Or, close the connection, and retry when the registration has been completed
-}
-
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle, password string, lflags byte) bool {
+func (h *Host) Login(handle, password string, lflags byte ) (bool, string) {
 	loginByte := make([]byte, 1)
 	loginByte[0] = tLogin
 	h.conn.Write(loginByte)
@@ -146,13 +134,7 @@ func (h *Host) Login(handle, password string, lflags byte) bool {
 		ver = ver && (sr[i] == srVer[i])
 	}
 	if !ver {
-		fmt.Println("Invalid response from server, authentication failed.")
-		return false
+		return false, "Invalid responce from server"
 	}
-
-	loginByte[0] = lflags
-	h.conn.Write(loginByte)
-
-	fmt.Println("Authenticated!")
-	return true
+	return true, "Authenticated"
 }

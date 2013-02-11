@@ -2,12 +2,14 @@ package main
 
 import (
 	"container/list"
-	"fmt"
 	"github.com/nsf/termbox-go"
 	"strings"
 )
 
 // Termbox stuff
+func alpha_num_spec(ch rune) bool {
+  return ch == '`' // TODO Write this function
+}
 
 // Fills from x,y to x+width horizontally
 func fill_h(filler string, x int, y int, width int) {
@@ -53,14 +55,12 @@ func write_wrap_ch(x int, y int, mess string) {
 	width := sx - x
 	lines := (int)(len(mess) / (width))
 	lines += 1
-	write_center(4, fmt.Sprintf("lines: %d", lines))
 	for i := 0; i < lines; i++ {
 		start := width * i
 		end := width * (i + 1)
 		if end > len(mess[start:len(mess)]) {
 			end = len(mess[start:len(mess)])
 		}
-		write_center(5+i, fmt.Sprintf("start: %d end: %d", start, end))
 		write(x, y+i, mess[start:end])
 	}
 
@@ -70,6 +70,10 @@ func write_wrap_ch(x int, y int, mess string) {
 func write_center(y int, mess string) {
 	x, _ := termbox.Size()
 	write_us(((x / 2) - (len(mess) / 2)), y, mess)
+}
+
+func write_center_wrap(start_y int, lines []string) {
+
 }
 
 // Display text on the screen starting at x,y
