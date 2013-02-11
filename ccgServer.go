@@ -100,8 +100,9 @@ func (s *Server) AuthUser(u *User) bool {
 	unamebuf := make([]byte, ulen)
 	u.conn.Read(unamebuf)
 	u.username = string(unamebuf)
+	fmt.Println(s.PassHashes)
 	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
-	if _, ok := s.PassHashes[u.username]; ok {
+	if _, ok := s.PassHashes[u.username]; !ok {
 		fmt.Println("Not a registered user! Closing connection.")
 		return false
 	}
@@ -162,7 +163,7 @@ func (s *Server) Listen() {
 		}
 		defer conn.Close()
 		log.Printf("server: accepted from %s", conn.RemoteAddr())
-		_, ok := conn.(*tls.Conn) //Type assertion
+		//_, ok := conn.(*tls.Conn) //Type assertion
 		u := UserWithConn(conn)
 		go s.HandleUser(u,s.com) //Asynchronously listen to the connection
 	}
