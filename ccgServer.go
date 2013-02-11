@@ -81,7 +81,7 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 			u.conn.Close()
 		}
 	} else if checkByte[0] == tRegister {
-		uname := ReadShortString(u.conn)
+		uname,_ := ReadShortString(u.conn)
 		key := make([]byte,32)
 		u.conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
@@ -197,8 +197,6 @@ func (s *Server) MessageHandler() {
 func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
-		log.Println("Rewriting packet to clients...")
-		//for now, just write the packets back.
 		for i := s.users.Front(); i != nil; i = i.Next() {
 			_, err := i.Value.(*User).conn.Write(p.getBytes())
 			if err != nil {
@@ -208,7 +206,16 @@ func (s *Server) MessageWriter() {
 }
 
 func (s *Server) loadUserList(filename string) {
-
+	f, _ := os.Open(filename)
+	for {
+		uname,err := ReadShortString(f)
+		if err != nil {
+			break
+		}
+		phash := make([]byte,32)
+		f.Read(phash)
+		s.PassHashes[uname] = phash
+	}
 }
 
 func (s *Server) saveUserList(filename string) {

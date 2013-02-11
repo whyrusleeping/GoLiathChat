@@ -111,11 +111,8 @@ func (h *Host) Login(handle, password string, lflags byte) bool {
 	loginByte[0] = tLogin
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
-	fmt.Println("Hashed Pass:")
-	fmt.Println(iPassHash)
 	//Write the usernames length, followed by the username.
 	ulen := BytesFromInt32(int32(len(handle)))
-	fmt.Println(ulen)
 	h.conn.Write(ulen)
 	h.conn.Write([]byte(handle))
 

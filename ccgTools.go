@@ -5,18 +5,16 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"code.google.com/p/go.crypto/scrypt"
-	"net"
-	"log"
+	"io"
 )
 
 //Awesome salt thanks to travis lane.
 var tSalt = "brownchocolatemoosecoffeelatte"
 
-func ReadInt32(c net.Conn) int32 {
+func ReadInt32(c io.Reader) int32 {
 	var r int32
 	buf := make([]byte, 4)
 	c.Read(buf)
-	log.Println(buf)
 	obuf := bytes.NewBuffer(buf)
 	binary.Read(obuf, binary.LittleEndian, &r)
 	return r
@@ -37,15 +35,18 @@ func BytesFromShortString(s string) []byte {
 	return buf.Bytes()
 }
 
-func ReadShortString(c net.Conn) string {
+func ReadShortString(c io.Reader) (string, error) {
 	l := make([]byte, 2)
-	c.Read(l)
+	_, err := c.Read(l)
+	if err != nil {
+		return "", err
+	}
 	var r uint16
 	buf := bytes.NewBuffer(l)
 	binary.Read(buf, binary.LittleEndian, &r)
 	str := make([]byte, r)
 	c.Read(str)
-	return string(str)
+	return string(str), nil
 }
 
 func BytesFromLongString(s string) []byte {

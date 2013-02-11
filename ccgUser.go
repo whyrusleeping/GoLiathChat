@@ -22,7 +22,6 @@ func UserWithConn(conn net.Conn) *User {
 func (u *User) Listen() {
 	for {
 		p, err := ReadPacket(u.conn)
-		log.Printf("Received Packet from %s\n", u.username)
 		p.username = u.username
 		if err != nil {
 			log.Printf("%s has disconnected.\n", u.username)
