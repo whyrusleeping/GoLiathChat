@@ -73,8 +73,8 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	u.conn.Read(checkByte)
 	if checkByte[0] == tLogin {
 		if s.AuthUser(u) {
-			u.Listen()
 			s.users.PushBack(u)
+			u.Listen()
 		} else {
 			u.conn.Close()
 		}
@@ -193,7 +193,7 @@ func (s *Server) MessageHandler() {
 func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
-
+		log.Println("Rewriting packet to clients...")
 		//for now, just write the packets back.
 		for i := s.users.Front(); i != nil; i = i.Next() {
 			_, err := i.Value.(*User).conn.Write(p.getBytes())
