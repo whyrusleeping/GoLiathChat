@@ -111,8 +111,11 @@ func (h *Host) Login(handle, password string, lflags byte) bool {
 	loginByte[0] = tLogin
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
+	fmt.Println("Hashed Pass:")
+	fmt.Println(iPassHash)
 	//Write the usernames length, followed by the username.
 	ulen := BytesFromInt32(int32(len(handle)))
+	fmt.Println(ulen)
 	h.conn.Write(ulen)
 	h.conn.Write([]byte(handle))
 
@@ -129,14 +132,16 @@ func (h *Host) Login(handle, password string, lflags byte) bool {
 	//Generate a hash of the password with the challenge and response as salts
 	hashA, _ := scrypt.Key(iPassHash, combSalt, 16384, 8, 1, 32)
 
+	log.Println("Sending hash and response.")
 	//write the hash, and the response
 	h.conn.Write(hashA)
 	h.conn.Write(cc)
 	sr := make([]byte, 32)
 
+	log.Println("Waiting on server...")
 	//Read the servers response
 	h.conn.Read(sr)
-	srVer, _ := scrypt.Key(iPassHash, combSalt, 32768, 4, 7, 32)
+	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 7, 32)
 
 	//and ensure that it is correct
 	ver := true

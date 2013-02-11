@@ -13,9 +13,9 @@ package main
 
 import (
 	"container/list"
+	"code.google.com/p/go.crypto/scrypt"
 	"crypto/rand"
 	"crypto/tls"
-	//"crypto/x509"
 	"log"
 	"fmt"
 	"net"
@@ -25,13 +25,26 @@ type Server struct {
 	users    *list.List
 	messages *list.List
 	regReqs  map[string][]byte
+	PassHashes map[string][]byte
 	listener net.Listener
 	com      chan Packet
 	parse    chan Packet
 }
 
+func (s *Server) LoginPrompt() {
+	var handle string
+	var pass string
+	fmt.Println("Admin Username:")
+	fmt.Scanf("%s",&handle)
+	fmt.Println("Password:")
+	fmt.Scanf("%s",&pass)
+	s.PassHashes[handle] = HashPassword(pass)
+}
+
 func StartServer() *Server {
 	s := Server{}
+	s.PassHashes = make(map[string][]byte)
+	s.LoginPrompt()
 	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
@@ -53,6 +66,90 @@ func StartServer() *Server {
 	return &s
 }
 
+func (s *Server) HandleUser(u *User, outp chan<- Packet) {
+	log.Println("New connection!")
+	u.outp = outp
+	checkByte := make([]byte, 1)
+	u.conn.Read(checkByte)
+	if checkByte[0] == tLogin {
+		if s.AuthUser(u) {
+			u.Listen()
+			s.users.PushBack(u)
+		} else {
+			u.conn.Close()
+		}
+	} else if checkByte[0] == tRegister {
+		uname := ReadShortString(u.conn)
+		key := make([]byte,32)
+		u.conn.Read(key)
+		log.Printf("%s wishes to register.\n", uname)
+		rp := NewPacket(tRegister, uname)
+		outp <- rp
+		//Either wait for authentication, or tell user to reconnect after the registration is complete..
+		//Not quite sure how to handle this
+		u.conn.Close()
+	} else {
+		u.conn.Close()
+	}
+}
+
+func (s *Server) AuthUser(u *User) bool {
+	//Read the length of the clients username, followed by the username
+	ulen := ReadInt32(u.conn)
+	fmt.Printf("Username Length: %d\n",ulen)
+	unamebuf := make([]byte, ulen)
+	u.conn.Read(unamebuf)
+	u.username = string(unamebuf)
+	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
+	if _, ok := s.PassHashes[u.username]; ok {
+		fmt.Println("Not a registered user! Closing connection.")
+		return false
+	}
+	password := s.PassHashes[u.username]
+	fmt.Println("Password from map:")
+	fmt.Println(password)
+
+	//Generate a challenge and send it to the server
+	sc := GeneratePepper()
+	log.Println(sc)
+	u.conn.Write(sc)
+
+	//Read the clients password hash and their response to the challenge
+	hashA := make([]byte, 32)
+	cc := make([]byte, 32)
+	u.conn.Read(hashA)
+	u.conn.Read(cc)
+
+	log.Println("Received hash and response from user.")
+
+	combSalt := make([]byte, len(sc)+len(cc))
+	copy(combSalt, sc)
+	copy(combSalt[len(sc):], cc)
+
+	hashAver, _ := scrypt.Key(password, combSalt, 16384, 8, 1, 32)
+
+	//Verify keys are the same.
+	ver := true
+	for i := 0; ver && i < len(hashA); i++ {
+		ver = ver && (hashA[i] == hashAver[i])
+	}
+	if !ver {
+		log.Println("Invalid Authentication")
+		return false
+	}
+
+	//Generate a response to the client
+	sr, _ := scrypt.Key(password, combSalt, 16384, 4, 7, 32)
+	u.conn.Write(sr)
+
+	//Read login flags
+	lflags := make([]byte, 1)
+	u.conn.Read(lflags)
+
+	log.Println("Authenticated!")
+	return true
+}
+
 func (s *Server) Listen() {
 	log.Print("server: listening")
 	go s.MessageWriter()
@@ -66,16 +163,8 @@ func (s *Server) Listen() {
 		defer conn.Close()
 		log.Printf("server: accepted from %s", conn.RemoteAddr())
 		_, ok := conn.(*tls.Conn) //Type assertion
-		if ok {
-			log.Print("ok=true")
-			/*state := tlscon.ConnectionState()
-			for _, v := range state.PeerCertificates {
-				log.Print(x509.MarshalPKIXPublicKey(v.PublicKey))
-			}*/
-		}
 		u := UserWithConn(conn)
-		s.users.PushBack(u)
-		go u.Handle(s.com) //Asynchronously listen to the connection
+		go s.HandleUser(u,s.com) //Asynchronously listen to the connection
 	}
 }
 
@@ -86,13 +175,13 @@ func (s *Server) MessageHandler() {
 	for {
 		p := <-s.com
 		switch p.typ {
-			case tMessage:
-				messages.PushFront(p)
-				s.parse <- p
-			case tRegister:
-				s.regReqs[p.username] = []byte(p.payload)
-				p.payload = []byte(fmt.Sprintf("%s requests authentication."))
-				s.parse <- p
+		case tMessage:
+			messages.PushFront(p)
+			s.parse <- p
+		case tRegister:
+			s.regReqs[p.username] = []byte(p.payload)
+			p.payload = []byte(fmt.Sprintf("%s requests authentication."))
+			s.parse <- p
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}

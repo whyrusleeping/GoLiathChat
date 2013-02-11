@@ -1,11 +1,11 @@
 /************************
 
 Go Command Chat
-	-Jeromy Johnson, Travis Lane
-	A command line chat system that 
-	will make it easy to set up a 
-	quick secure chat room for any 
-	number of people
+-Jeromy Johnson, Travis Lane
+A command line chat system that 
+will make it easy to set up a 
+quick secure chat room for any 
+number of people
 
 ************************/
 
@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if !serv.Login("username", "password",0) {
+	if !serv.Login("jeromy", "password",0) {
 		fmt.Println("Login failed... Exiting.")
 		return
 	}
@@ -65,7 +65,7 @@ func main() {
 		case keyEvent := <-keyboard:
 			switch keyEvent.Type {
 			case termbox.EventKey:
-			  // Safe Exit (Waits for last message to send)
+				// Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
 					clear()
 					message_us("Exiting...")
@@ -73,7 +73,7 @@ func main() {
 					time.Sleep(time.Second * 2)
 					running = false
 					break
-				// Unsafe Exit (Does not wait)
+					// Unsafe Exit (Does not wait)
 				} else if keyEvent.Key == termbox.KeyCtrlC {
 					clear()
 					flush()
@@ -116,17 +116,17 @@ func main() {
 				displayWindow(input, messages, start_message)
 				flush()
 			case termbox.EventResize:
-			  clear()
+				clear()
 				displayWindow(input, messages, start_message)
 				flush()
 			case termbox.EventError:
 				panic(keyEvent.Err)
 			}
 		case serverEvent := <-serv.reader:
-      message := MessageObject{string(serverEvent.payload), "default", time.Now().Second()}
+			message := MessageObject{string(serverEvent.payload), "default", time.Now().Second()}
 			messages.PushFront(message)
 			clear()
-		  displayWindow(input, messages, start_message)
+			displayWindow(input, messages, start_message)
 			flush()
 		}
 	}

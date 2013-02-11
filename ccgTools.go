@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"code.google.com/p/go.crypto/scrypt"
 	"net"
+	"log"
 )
 
 //Awesome salt thanks to travis lane.
@@ -15,6 +16,7 @@ func ReadInt32(c net.Conn) int32 {
 	var r int32
 	buf := make([]byte, 4)
 	c.Read(buf)
+	log.Println(buf)
 	obuf := bytes.NewBuffer(buf)
 	binary.Read(obuf, binary.LittleEndian, &r)
 	return r
@@ -62,7 +64,10 @@ func GeneratePepper() []byte {
 }
 
 func HashPassword(password string) []byte {
-	pHash,_ := scrypt.Key([]byte(password), []byte(tSalt), 2^17, 19, 103, 32)
+	pHash,err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 19, 7, 32)
+	if err != nil {
+		panic(err)
+	}
 	return pHash
 }
 

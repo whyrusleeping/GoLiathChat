@@ -8,16 +8,16 @@ import (
 )
 
 const (
-	tQuit    = 0
-	tMessage = 1
-	tCommand = 2
-	tLogin   = 3
-	tWhisper = 4
-	tFile    = 5
-	tRegister= 6
-	tInfo	 = 7
-	tHistory = 8
-	tAccept  = 9
+	tQuit    = iota
+	tMessage = iota
+	tCommand = iota
+	tLogin   = iota
+	tWhisper = iota
+	tFile    = iota
+	tRegister= iota
+	tInfo	 = iota
+	tHistory = iota
+	tAccept  = iota
 )
 
 type Packet struct {
