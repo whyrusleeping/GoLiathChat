@@ -42,9 +42,11 @@ func main() {
 
   quit := false
   loggedin := false
-	for !quit {
+	for !quit && !loggedin {
 	  quit, loggedin = displayLoginWindow(serv)
 	}
+	clear()
+	flush()
 	
   //loggedin,_ = serv.Login("username", "password",0)
   if loggedin && !quit{
@@ -78,6 +80,7 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 	for !quit && !login {
 		select {
 		case keyEvent := <-keyboard:
+		  login_err = ""
 			switch keyEvent.Type {
 			case termbox.EventKey:
 							// Safe Exit (Waits for last message to send)
@@ -102,23 +105,23 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 					  box = 1
 					} else if box == 1 {
 					  if name == "" {
-					    err := "Username can not be blank."
-					    updateLoginWindow(name , pass , box , err) 
+					    login_err = "Username can not be blank."
 					  } else if pass == "" {
-					    err := "Password can not be blank."
-					    updateLoginWindow(name , pass , box , err) 
+					    login_err = "Password can not be blank."
 					  } else {
+					    login_err = "Logging in..."
+					    updateLoginWindow(name, pass, box, login_err)
 					    login, login_err = serv.Login(name, pass,0)
 					  }
-					  updateLoginWindow(name, pass, box, login_err)
 					}
 				} else if keyEvent.Key == termbox.KeyBackspace {
+				  // Remove a ch
 				  if box == 0 && len(name) > 0{         // Name
 				    name = name[0 : len(name)-1]
 				  } else if box == 1 && len(pass) > 0 {  // Password
 				    pass = pass[0 : len(pass)-1]
 				  } 
-					// Remove a ch
+					
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
 					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyArrowUp {
