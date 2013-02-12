@@ -124,6 +124,11 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 					
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
 					// Remove a ch
+				  if box == 0 && len(name) > 0{         // Name
+				    name = name[0 : len(name)-1]
+				  } else if box == 1 && len(pass) > 0 {  // Password
+				    pass = pass[0 : len(pass)-1]
+				  } 
 				} else if keyEvent.Key == termbox.KeyArrowUp {
 					// Move up a box
 				} else if keyEvent.Key == termbox.KeyArrowDown {
@@ -133,14 +138,18 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 				} else if keyEvent.Key == termbox.KeyArrowLeft {
 					// Update the cursor position
 				} else if keyEvent.Key == termbox.KeySpace {
-				
-				} else if alpha_num_spec(keyEvent.Ch) {
-				
-				} else {
 				  if box == 0 && len(name) < 64 {
-				    name += string(keyEvent.Ch)
+				    name += " "
 				  } else if box == 1 && len(pass) < 64 {
-				    pass += string(keyEvent.Ch)
+				    pass += " "
+				  }
+				} else {
+				  if(keyEvent.Ch != 0){
+				    if box == 0 && len(name) < 64 {
+				      name += string(keyEvent.Ch)
+				    } else if box == 1 && len(pass) < 64 {
+				      pass += string(keyEvent.Ch)
+				    }
 				  }
 				}
 			  updateLoginWindow(name, pass, box, login_err)
@@ -237,7 +246,9 @@ func displayChatWindow(serv *Host) {
 				} else if keyEvent.Key == termbox.KeyArrowLeft {
 					//Do nothing for now
 				} else if keyEvent.Key == termbox.KeySpace {
-					input += " "
+				  if len(input) <= 160 {
+					  input += " "
+					}
 					//Do nothing for now
 				} else {
 					if len(input) <= 160 {

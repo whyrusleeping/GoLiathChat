@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-// Termbox stuff
-func alpha_num_spec(ch rune) bool {
-  return ch == '`' // TODO Write this function
-}
-
 // Fills from x,y to x+width horizontally
 func fill_h(filler string, x int, y int, width int) {
 	for c := x; c < width; c++ {
