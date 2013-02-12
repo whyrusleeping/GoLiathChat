@@ -42,12 +42,11 @@ func main() {
 
   quit := false
   loggedin := false
-	/* Login to server 
 	for !quit {
 	  quit, loggedin = displayLoginWindow(serv)
 	}
-	*/
-  loggedin,_ = serv.Login("username", "password",0)
+	
+  //loggedin,_ = serv.Login("username", "password",0)
   if loggedin && !quit{
     // Start the server
     serv.Start()
@@ -64,10 +63,14 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 	name := ""
 	pass := ""
 	login_err := ""
-	box := 0  // 0 Username 1 Password 2 Options
-	cursor := 0
+	// 0 Username 
+	// 1 Password 
+	// 2 Options
+	box := 0  
 	//login_message := ""
 	keyboard := make(chan termbox.Event)
+	
+	updateLoginWindow(name, pass, box, login_err)
 	
 	// Start the goroutines
 	go keyboardEventPoller(keyboard)
@@ -100,21 +103,20 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 					} else if box == 1 {
 					  if name == "" {
 					    err := "Username can not be blank."
-					    updateLoginWindow(name , pass , box , cursor , err) 
+					    updateLoginWindow(name , pass , box , err) 
 					  } else if pass == "" {
 					    err := "Password can not be blank."
-					    updateLoginWindow(name , pass , box , cursor , err) 
+					    updateLoginWindow(name , pass , box , err) 
 					  } else {
-					    login, login_err = serv.Login("username", "password",0)
+					    login, login_err = serv.Login(name, pass,0)
 					  }
-					  updateLoginWindow(name, pass, box, cursor, login_err)
+					  updateLoginWindow(name, pass, box, login_err)
 					}
 				} else if keyEvent.Key == termbox.KeyBackspace {
-				  if box == 0 {         // Name
-				  
-				  } else if box == 1 {  // Password
-				  
-				  
+				  if box == 0 && len(name) > 0{         // Name
+				    name = name[0 : len(name)-1]
+				  } else if box == 1 && len(pass) > 0 {  // Password
+				    pass = pass[0 : len(pass)-1]
 				  } 
 					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
@@ -132,35 +134,43 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 				} else if alpha_num_spec(keyEvent.Ch) {
 				
 				} else {
-				  // do nothing
+				  if box == 0 && len(name) < 64 {
+				    name += string(keyEvent.Ch)
+				  } else if box == 1 && len(pass) < 64 {
+				    pass += string(keyEvent.Ch)
+				  }
 				}
-			
+			  updateLoginWindow(name, pass, box, login_err)
 	    case termbox.EventResize:
-
+        updateLoginWindow(name, pass, box, login_err)
 		  case termbox.EventError:
 			  panic(keyEvent.Err)
 			}
-		}	
+		}
+		
 	}
-  login, login_err = serv.Login("username", "password",0)
-  updateLoginWindow(name, pass, box, cursor, login_err)
+  updateLoginWindow(name, pass, box, login_err)
 	
 	return quit, login
 }
 
 // Update the login window
-func updateLoginWindow(name string, pass string, box int, cursor int, err string) {
+func updateLoginWindow(name string, pass string, box int, err string) {
+  clear()
   sx, sy := termbox.Size()
   
   name_lines := getLines(name, sx-2)
-  //pass_lines := getLines(pass, sx-2)
-  //err_lines := getLines(err, sx-2)
+  pass_lines := getLines(pass, sx-2)
+  err_lines := getLines(err, sx-2)
   
   
   write_center((sy/2)-len(name_lines)-1, "Username:")
-  
+  write_center_wrap((sy/2)-len(name_lines), name_lines)
   write_center((sy/2)+len(name_lines)+1, "Password:")
-
+  write_center_wrap((sy/2)+len(name_lines)+2, pass_lines)
+  
+  write_center_wrap(sy-len(err_lines), err_lines)
+  flush()
 }
 
 // Displays the chat window
