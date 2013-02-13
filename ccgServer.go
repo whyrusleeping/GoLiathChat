@@ -183,7 +183,7 @@ func (s *Server) MessageHandler() {
 			p.payload = []byte(fmt.Sprintf("%s requests authentication."))
 			s.parse <- p
 		case tAccept:
-			s.PassHashes[string(p.payload)] = s.regReqs[p.payload]
+			s.PassHashes[string(p.payload)] = s.regReqs[string(p.payload)]
 			delete(s.regReqs, p.username)
 			//add the specified user to the user list
 		}

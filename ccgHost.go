@@ -127,13 +127,13 @@ func (h *Host) Login(handle, password string, lflags byte ) (bool, string) {
 	//Generate a hash of the password with the challenge and response as salts
 	hashA, _ := scrypt.Key(iPassHash, combSalt, 16384, 8, 1, 32)
 
-	log.Println("Sending hash and response.")
+	//log.Println("Sending hash and response.")
 	//write the hash, and the response
 	h.conn.Write(hashA)
 	h.conn.Write(cc)
 	sr := make([]byte, 32)
 
-	log.Println("Waiting on server...")
+	//tlog.Println("Waiting on server...")
 	//Read the servers response
 	h.conn.Read(sr)
 	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 7, 32)
@@ -146,5 +146,9 @@ func (h *Host) Login(handle, password string, lflags byte ) (bool, string) {
 	if !ver {
 		return false, "Invalid responce from server"
 	}
+	//Send login flags to the server
+	loginByte[0] = lflags
+	h.conn.Write(loginByte)
+
 	return true, "Authenticated"
 }

@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-// Termbox stuff
-func alpha_num_spec(ch rune) bool {
-  return ch == '`' // TODO Write this function
-}
-
 // Fills from x,y to x+width horizontally
 func fill_h(filler string, x int, y int, width int) {
 	for c := x; c < width; c++ {
@@ -72,8 +67,11 @@ func write_center(y int, mess string) {
 	write_us(((x / 2) - (len(mess) / 2)), y, mess)
 }
 
+//Write lines to the center of the screen
 func write_center_wrap(start_y int, lines []string) {
-
+  for i , line := range lines {
+    write_center(start_y+i, line)
+  }
 }
 
 // Display text on the screen starting at x,y
