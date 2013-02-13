@@ -111,7 +111,6 @@ func (s *Server) AuthUser(u *User) bool {
 
 	//Generate a challenge and send it to the server
 	sc := GeneratePepper()
-	log.Println(sc)
 	u.conn.Write(sc)
 
 	//Read the clients password hash and their response to the challenge

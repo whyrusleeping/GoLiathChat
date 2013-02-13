@@ -120,7 +120,7 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 				    name = name[0 : len(name)-1]
 				  } else if box == 1 && len(pass) > 0 {  // Password
 				    pass = pass[0 : len(pass)-1]
-				  } 
+				  }
 					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
 					// Remove a ch
@@ -128,7 +128,7 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 				    name = name[0 : len(name)-1]
 				  } else if box == 1 && len(pass) > 0 {  // Password
 				    pass = pass[0 : len(pass)-1]
-				  } 
+				}
 				} else if keyEvent.Key == termbox.KeyArrowUp {
 					// Move up a box
 				} else if keyEvent.Key == termbox.KeyArrowDown {
@@ -159,28 +159,28 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 			  panic(keyEvent.Err)
 			}
 		}
-		
+
 	}
   updateLoginWindow(name, pass, box, login_err)
-	
-	return quit, login
+
+  return quit, login
 }
 
 // Update the login window
 func updateLoginWindow(name string, pass string, box int, err string) {
   clear()
   sx, sy := termbox.Size()
-  
+
   name_lines := getLines(name, sx-2)
   pass_lines := getLines(pass, sx-2)
   err_lines := getLines(err, sx-2)
-  
-  
+
+
   write_center((sy/2)-len(name_lines)-1, "Username:")
   write_center_wrap((sy/2)-len(name_lines), name_lines)
   write_center((sy/2)+len(name_lines)+1, "Password:")
   write_center_wrap((sy/2)+len(name_lines)+2, pass_lines)
-  
+
   write_center_wrap(sy-len(err_lines), err_lines)
   flush()
 }
@@ -266,14 +266,13 @@ func displayChatWindow(serv *Host) {
 				panic(keyEvent.Err)
 			}
 		case serverEvent := <-serv.reader:
-			message := MessageObject{string(serverEvent.payload), "default", time.Now().Second()}
+			message := MessageObject{string(serverEvent.payload), serverEvent.username, time.Now().Second()}
 			messages.PushFront(message)
 			clear()
 			updateChatWindow(input, messages, start_message)
 			flush()
 		}
 	}
-	
 }
 
 // Polls for keyboard events
