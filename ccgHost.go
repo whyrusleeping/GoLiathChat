@@ -93,6 +93,16 @@ func (h *Host) readMessages() {
 	}
 }
 
+func (h *Host) Register(handle, password string) {
+	regByte := make([]byte, 1)
+	regByte[0] = tRegister
+	h.conn.Write(regByte)
+	h.conn.Write(BytesFromShortString(handle))
+	phash := HashPassword(password)
+	h.conn.Write(phash)
+
+}
+
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle, password string, lflags byte ) (bool, string) {
 	loginByte := make([]byte, 1)

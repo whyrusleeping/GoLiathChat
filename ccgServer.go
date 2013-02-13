@@ -95,22 +95,19 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	}
 }
 
+//Authenticate the user against the list of users in the PassHashes map
 func (s *Server) AuthUser(u *User) bool {
 	//Read the length of the clients username, followed by the username
 	ulen := ReadInt32(u.conn)
-	fmt.Printf("Username Length: %d\n",ulen)
 	unamebuf := make([]byte, ulen)
 	u.conn.Read(unamebuf)
 	u.username = string(unamebuf)
-	fmt.Println(s.PassHashes)
 	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
 	if _, ok := s.PassHashes[u.username]; !ok {
 		fmt.Println("Not a registered user! Closing connection.")
 		return false
 	}
 	password := s.PassHashes[u.username]
-	fmt.Println("Password from map:")
-	fmt.Println(password)
 
 	//Generate a challenge and send it to the server
 	sc := GeneratePepper()
@@ -186,6 +183,8 @@ func (s *Server) MessageHandler() {
 			p.payload = []byte(fmt.Sprintf("%s requests authentication."))
 			s.parse <- p
 		case tAccept:
+			s.PassHashes[string(p.payload)] = s.regReqs[p.payload]
+			delete(s.regReqs, p.username)
 			//add the specified user to the user list
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
