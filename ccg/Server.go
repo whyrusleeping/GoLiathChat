@@ -162,7 +162,7 @@ func (s *Server) Listen() {
 }
 
 func (s *Server) command(p Packet) {
-
+	
 }
 
 //Receives packets parsed from incoming users and 

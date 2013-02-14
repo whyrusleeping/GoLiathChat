@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"io"
+	"strings"
 )
 
 //Awesome salt thanks to travis lane.
@@ -82,4 +83,9 @@ func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
 	buf.Write([]byte("]"))
 	buf.Write(pHash)
 	return buf.Bytes()
+}
+
+func extractCommand(pay string) string {
+	i := strings.Index(pay, " ")
+	return pay[1:i]
 }
