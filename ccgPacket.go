@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	tQuit    = iota
+	tQuit    = byte(iota)
 	tMessage
 	tCommand
 	tLogin
