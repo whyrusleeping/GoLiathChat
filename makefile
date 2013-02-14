@@ -1,7 +1,7 @@
 all: dir client server
 
 dir:
-	mkdir bin || true
+	test -d bin || mkdir bin
 
 client: 
 	go build -o bin/client ccgClient.go
