@@ -12,25 +12,25 @@ number of people
 package main
 
 import (
-	"container/list"
+	"bytes"
 	"code.google.com/p/go.crypto/scrypt"
+	"container/list"
 	"crypto/rand"
 	"crypto/tls"
-	"bytes"
-	"os"
-	"log"
 	"fmt"
+	"log"
 	"net"
+	"os"
 )
 
 type Server struct {
-	users    *list.List
-	messages *list.List
-	regReqs  map[string][]byte
+	users      *list.List
+	messages   *list.List
+	regReqs    map[string][]byte
 	PassHashes map[string][]byte
-	listener net.Listener
-	com      chan Packet
-	parse    chan Packet
+	listener   net.Listener
+	com        chan Packet
+	parse      chan Packet
 }
 
 func (s *Server) LoginPrompt() {
@@ -41,9 +41,9 @@ func (s *Server) LoginPrompt() {
 	var handle string
 	var pass string
 	fmt.Println("Admin Username:")
-	fmt.Scanf("%s",&handle)
+	fmt.Scanf("%s", &handle)
 	fmt.Println("Password:")
-	fmt.Scanf("%s",&pass)
+	fmt.Scanf("%s", &pass)
 	s.PassHashes[handle] = HashPassword(pass)
 	s.saveUserList("users.f")
 }
@@ -87,8 +87,8 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 			u.conn.Close()
 		}
 	} else if checkByte[0] == tRegister {
-		uname,_ := ReadShortString(u.conn)
-		key := make([]byte,32)
+		uname, _ := ReadShortString(u.conn)
+		key := make([]byte, 32)
 		u.conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(tRegister, uname)
@@ -168,7 +168,7 @@ func (s *Server) Listen() {
 		log.Printf("server: accepted from %s", conn.RemoteAddr())
 		//_, ok := conn.(*tls.Conn) //Type assertion
 		u := UserWithConn(conn)
-		go s.HandleUser(u,s.com) //Asynchronously listen to the connection
+		go s.HandleUser(u, s.com) //Asynchronously listen to the connection
 	}
 }
 
@@ -212,11 +212,11 @@ func (s *Server) MessageWriter() {
 func (s *Server) loadUserList(filename string) {
 	f, _ := os.Open(filename)
 	for {
-		uname,err := ReadShortString(f)
+		uname, err := ReadShortString(f)
 		if err != nil {
 			break
 		}
-		phash := make([]byte,32)
+		phash := make([]byte, 32)
 		f.Read(phash)
 		s.PassHashes[uname] = phash
 	}
@@ -228,7 +228,7 @@ func (s *Server) saveUserList(filename string) {
 		wrbuf.Write(BytesFromShortString(name))
 		wrbuf.Write(phash)
 	}
-	f,_ := os.Create(filename)
+	f, _ := os.Create(filename)
 	_, err := f.Write(wrbuf.Bytes())
 	if err != nil {
 		panic(err)

@@ -9,13 +9,13 @@ import (
 
 //Login Flags
 const (
-	fAnon		= 1 << 0
-	fInvisible  = 1 << 1
+	fAnon      = 1 << 0
+	fInvisible = 1 << 1
 )
 
 //Usage is simple, read messages from the reader, and write to the writer.
 type Host struct {
-	conn            net.Conn
+	conn           net.Conn
 	writer, reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
@@ -81,7 +81,7 @@ func (h *Host) writeMessages() {
 
 func (h *Host) readMessages() {
 	for {
-		p,err := ReadPacket(h.conn)
+		p, err := ReadPacket(h.conn)
 		if err != nil {
 			panic(err)
 		}
@@ -99,7 +99,7 @@ func (h *Host) Register(handle, password string) {
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle, password string, lflags byte ) (bool, string) {
+func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	loginByte := make([]byte, 1)
 	loginByte[0] = tLogin
 	h.conn.Write(loginByte)

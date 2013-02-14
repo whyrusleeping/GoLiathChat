@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
+	"code.google.com/p/go.crypto/scrypt"
 	"crypto/rand"
 	"encoding/binary"
-	"code.google.com/p/go.crypto/scrypt"
 	"io"
 )
 
@@ -65,7 +65,7 @@ func GeneratePepper() []byte {
 }
 
 func HashPassword(password string) []byte {
-	pHash,err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 19, 7, 32)
+	pHash, err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 19, 7, 32)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +76,7 @@ func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
 	if len(pHash) != 32 {
 		return nil
 	}
-	buf :=  new(bytes.Buffer)
+	buf := new(bytes.Buffer)
 	buf.Write([]byte("["))
 	buf.Write([]byte(u.username))
 	buf.Write([]byte("]"))

@@ -6,14 +6,14 @@ import (
 )
 
 type User struct {
-	conn net.Conn
+	conn     net.Conn
 	username string
-	perms	byte
-	outp	chan<- Packet
+	perms    byte
+	outp     chan<- Packet
 }
 
 func UserWithConn(conn net.Conn) *User {
-	u := User{conn,"",0,nil}
+	u := User{conn, "", 0, nil}
 	return &u
 }
 

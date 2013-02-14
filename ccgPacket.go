@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"time"
 	"net"
+	"time"
 )
 
 const (
-	tQuit    = byte(iota)
+	tQuit = byte(iota)
 	tMessage
 	tCommand
 	tLogin

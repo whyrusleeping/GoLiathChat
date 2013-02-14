@@ -12,9 +12,9 @@ Go Command Chat
 package main
 
 import (
+	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
-	"container/list"
 )
 
 type MessageObject struct {
@@ -40,21 +40,21 @@ func main() {
 	}
 	defer termbox.Close()
 
-  quit := false
-  loggedin := false
+	quit := false
+	loggedin := false
 	for !quit && !loggedin {
-	  quit, loggedin = displayLoginWindow(serv)
+		quit, loggedin = displayLoginWindow(serv)
 	}
 	clear()
 	flush()
-	
-  //loggedin,_ = serv.Login("username", "password",0)
-  if loggedin && !quit{
-    // Start the server
-    serv.Start()
-	  // Display the login window
-	  displayChatWindow(serv)
-	  quit = true;
+
+	//loggedin,_ = serv.Login("username", "password",0)
+	if loggedin && !quit {
+		// Start the server
+		serv.Start()
+		// Display the login window
+		displayChatWindow(serv)
+		quit = true
 	}
 }
 
@@ -68,22 +68,22 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 	// 0 Username 
 	// 1 Password 
 	// 2 Options
-	box := 0  
+	box := 0
 	//login_message := ""
 	keyboard := make(chan termbox.Event)
-	
+
 	updateLoginWindow(name, pass, box, login_err)
-	
+
 	// Start the goroutines
 	go keyboardEventPoller(keyboard)
-	
+
 	for !quit && !login {
 		select {
 		case keyEvent := <-keyboard:
-		  login_err = ""
+			login_err = ""
 			switch keyEvent.Type {
 			case termbox.EventKey:
-							// Safe Exit (Waits for last message to send)
+				// Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
 					clear()
 					message_us("Exiting...")
@@ -102,87 +102,86 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 				} else if keyEvent.Key == termbox.KeyEnter {
 					// If a box is empty, say no.
 					if box == 0 {
-					  box = 1
+						box = 1
 					} else if box == 1 {
-					  if name == "" {
-					    login_err = "Username can not be blank."
-					  } else if pass == "" {
-					    login_err = "Password can not be blank."
-					  } else {
-					    login_err = "Logging in..."
-					    updateLoginWindow(name, pass, box, login_err)
-					    login, login_err = serv.Login(name, pass,0)
-					  }
+						if name == "" {
+							login_err = "Username can not be blank."
+						} else if pass == "" {
+							login_err = "Password can not be blank."
+						} else {
+							login_err = "Logging in..."
+							updateLoginWindow(name, pass, box, login_err)
+							login, login_err = serv.Login(name, pass, 0)
+						}
 					}
 				} else if keyEvent.Key == termbox.KeyBackspace {
-				  // Remove a ch
-				  if box == 0 && len(name) > 0{         // Name
-				    name = name[0 : len(name)-1]
-				  } else if box == 1 && len(pass) > 0 {  // Password
-				    pass = pass[0 : len(pass)-1]
-				  }
+					// Remove a ch
+					if box == 0 && len(name) > 0 { // Name
+						name = name[0 : len(name)-1]
+					} else if box == 1 && len(pass) > 0 { // Password
+						pass = pass[0 : len(pass)-1]
+					}
 					// Remove a ch
 				} else if keyEvent.Key == termbox.KeyBackspace2 {
 					// Remove a ch
-				  if box == 0 && len(name) > 0{         // Name
-				    name = name[0 : len(name)-1]
-				  } else if box == 1 && len(pass) > 0 {  // Password
-				    pass = pass[0 : len(pass)-1]
-				}
+					if box == 0 && len(name) > 0 { // Name
+						name = name[0 : len(name)-1]
+					} else if box == 1 && len(pass) > 0 { // Password
+						pass = pass[0 : len(pass)-1]
+					}
 				} else if keyEvent.Key == termbox.KeyArrowUp {
 					// Move up a box
 				} else if keyEvent.Key == termbox.KeyArrowDown {
-				  // Move down a box
+					// Move down a box
 				} else if keyEvent.Key == termbox.KeyArrowRight {
 					// Update the cursor position
 				} else if keyEvent.Key == termbox.KeyArrowLeft {
 					// Update the cursor position
 				} else if keyEvent.Key == termbox.KeySpace {
-				  if box == 0 && len(name) < 64 {
-				    name += " "
-				  } else if box == 1 && len(pass) < 64 {
-				    pass += " "
-				  }
+					if box == 0 && len(name) < 64 {
+						name += " "
+					} else if box == 1 && len(pass) < 64 {
+						pass += " "
+					}
 				} else {
-				  if(keyEvent.Ch != 0){
-				    if box == 0 && len(name) < 64 {
-				      name += string(keyEvent.Ch)
-				    } else if box == 1 && len(pass) < 64 {
-				      pass += string(keyEvent.Ch)
-				    }
-				  }
+					if keyEvent.Ch != 0 {
+						if box == 0 && len(name) < 64 {
+							name += string(keyEvent.Ch)
+						} else if box == 1 && len(pass) < 64 {
+							pass += string(keyEvent.Ch)
+						}
+					}
 				}
-			  updateLoginWindow(name, pass, box, login_err)
-	    case termbox.EventResize:
-        updateLoginWindow(name, pass, box, login_err)
-		  case termbox.EventError:
-			  panic(keyEvent.Err)
+				updateLoginWindow(name, pass, box, login_err)
+			case termbox.EventResize:
+				updateLoginWindow(name, pass, box, login_err)
+			case termbox.EventError:
+				panic(keyEvent.Err)
 			}
 		}
 
 	}
-  updateLoginWindow(name, pass, box, login_err)
+	updateLoginWindow(name, pass, box, login_err)
 
-  return quit, login
+	return quit, login
 }
 
 // Update the login window
 func updateLoginWindow(name string, pass string, box int, err string) {
-  clear()
-  sx, sy := termbox.Size()
+	clear()
+	sx, sy := termbox.Size()
 
-  name_lines := getLines(name, sx-2)
-  pass_lines := getLines(pass, sx-2)
-  err_lines := getLines(err, sx-2)
+	name_lines := getLines(name, sx-2)
+	pass_lines := getLines(pass, sx-2)
+	err_lines := getLines(err, sx-2)
 
+	write_center((sy/2)-len(name_lines)-1, "Username:")
+	write_center_wrap((sy/2)-len(name_lines), name_lines)
+	write_center((sy/2)+len(name_lines)+1, "Password:")
+	write_center_wrap((sy/2)+len(name_lines)+2, pass_lines)
 
-  write_center((sy/2)-len(name_lines)-1, "Username:")
-  write_center_wrap((sy/2)-len(name_lines), name_lines)
-  write_center((sy/2)+len(name_lines)+1, "Password:")
-  write_center_wrap((sy/2)+len(name_lines)+2, pass_lines)
-
-  write_center_wrap(sy-len(err_lines), err_lines)
-  flush()
+	write_center_wrap(sy-len(err_lines), err_lines)
+	flush()
 }
 
 // Displays the chat window
@@ -246,8 +245,8 @@ func displayChatWindow(serv *Host) {
 				} else if keyEvent.Key == termbox.KeyArrowLeft {
 					//Do nothing for now
 				} else if keyEvent.Key == termbox.KeySpace {
-				  if len(input) <= 160 {
-					  input += " "
+					if len(input) <= 160 {
+						input += " "
 					}
 					//Do nothing for now
 				} else {
@@ -348,4 +347,3 @@ func displayInput(input string) int {
 	}
 	return 1
 }
-
