@@ -1,0 +1,6 @@
+*.orig
+*.swp
+users.f
+bin/*
+certs/*
+.tags
