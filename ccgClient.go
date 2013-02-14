@@ -15,6 +15,7 @@ import (
 	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
+	"./ccg"
 )
 
 type MessageObject struct {
@@ -27,7 +28,7 @@ func main() {
 	hostname := "127.0.0.1:10234"
 
 	/* Initialize Connection */
-	serv := NewHost()
+	serv := ccg.NewHost()
 	defer serv.Cleanup()
 	err := serv.Connect(hostname)
 	if err != nil {
@@ -45,10 +46,10 @@ func main() {
 	for !quit && !loggedin {
 		quit, loggedin = displayLoginWindow(serv)
 	}
-	clear()
-	flush()
+	ccg.Clear()
+	ccg.Flush()
 
-	//loggedin,_ = serv.Login("username", "password",0)
+	//loggedin,_ = serv.Login("Username", "password",0)
 	if loggedin && !quit {
 		// Start the server
 		serv.Start()
@@ -58,7 +59,7 @@ func main() {
 	}
 }
 
-func displayLoginWindow(serv *Host) (bool, bool) {
+func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	quit := false
 	login := false
 
@@ -85,17 +86,17 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 			case termbox.EventKey:
 				// Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
-					clear()
-					message_us("Exiting...")
-					flush()
+					ccg.Clear()
+					ccg.MessageUs("Exiting...")
+					ccg.Flush()
 					time.Sleep(time.Second * 2)
 					quit = true
 					login = false
 					break
 					// Unsafe Exit (Does not wait)
 				} else if keyEvent.Key == termbox.KeyCtrlC {
-					clear()
-					flush()
+					ccg.Clear()
+					ccg.Flush()
 					quit = true
 					login = false
 					break
@@ -168,24 +169,24 @@ func displayLoginWindow(serv *Host) (bool, bool) {
 
 // Update the login window
 func updateLoginWindow(name string, pass string, box int, err string) {
-	clear()
+	ccg.Clear()
 	sx, sy := termbox.Size()
 
-	name_lines := getLines(name, sx-2)
-	pass_lines := getLines(pass, sx-2)
-	err_lines := getLines(err, sx-2)
+	name_lines := ccg.GetLines(name, sx-2)
+	pass_lines := ccg.GetLines(pass, sx-2)
+	err_lines := ccg.GetLines(err, sx-2)
 
-	write_center((sy/2)-len(name_lines)-1, "Username:")
-	write_center_wrap((sy/2)-len(name_lines), name_lines)
-	write_center((sy/2)+len(name_lines)+1, "Password:")
-	write_center_wrap((sy/2)+len(name_lines)+2, pass_lines)
+	ccg.WriteCenter((sy/2)-len(name_lines)-1, "Username:")
+	ccg.WriteCenterWrap((sy/2)-len(name_lines), name_lines)
+	ccg.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
+	ccg.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
 
-	write_center_wrap(sy-len(err_lines), err_lines)
-	flush()
+	ccg.WriteCenterWrap(sy-len(err_lines), err_lines)
+	ccg.Flush()
 }
 
 // Displays the chat window
-func displayChatWindow(serv *Host) {
+func displayChatWindow(serv *ccg.Host) {
 
 	// Setup the variables
 	input := ""
@@ -194,9 +195,9 @@ func displayChatWindow(serv *Host) {
 	messages := list.New()
 	keyboard := make(chan termbox.Event)
 	// Display the window
-	clear()
+	ccg.Clear()
 	updateChatWindow(input, messages, start_message)
-	flush()
+	ccg.Flush()
 	// Start the goroutines
 	go keyboardEventPoller(keyboard)
 	// Run the main loop
@@ -207,16 +208,16 @@ func displayChatWindow(serv *Host) {
 			case termbox.EventKey:
 				// Safe Exit (Waits for last message to send)
 				if keyEvent.Key == termbox.KeyCtrlQ {
-					clear()
-					message_us("Exiting...")
-					flush()
+					ccg.Clear()
+					ccg.MessageUs("Exiting...")
+					ccg.Flush()
 					time.Sleep(time.Second * 2)
 					running = false
 					break
 					// Unsafe Exit (Does not wait)
 				} else if keyEvent.Key == termbox.KeyCtrlC {
-					clear()
-					flush()
+					ccg.Clear()
+					ccg.Flush()
 					running = false
 					break
 				} else if keyEvent.Key == termbox.KeyEnter {
@@ -254,22 +255,22 @@ func displayChatWindow(serv *Host) {
 						input += string(keyEvent.Ch)
 					}
 				}
-				clear()
+				ccg.Clear()
 				updateChatWindow(input, messages, start_message)
-				flush()
+				ccg.Flush()
 			case termbox.EventResize:
-				clear()
+				ccg.Clear()
 				updateChatWindow(input, messages, start_message)
-				flush()
+				ccg.Flush()
 			case termbox.EventError:
 				panic(keyEvent.Err)
 			}
-		case serverEvent := <-serv.reader:
-			message := MessageObject{string(serverEvent.payload), serverEvent.username, time.Now().Second()}
+		case serverEvent := <-serv.Reader:
+			message := MessageObject{string(serverEvent.Payload), serverEvent.Username, time.Now().Second()}
 			messages.PushFront(message)
-			clear()
+			ccg.Clear()
 			updateChatWindow(input, messages, start_message)
-			flush()
+			ccg.Flush()
 		}
 	}
 }
@@ -304,24 +305,24 @@ func displayMessages(messages *list.List, offset int, input_top int) {
 	for ; p != nil; p = p.Next() {
 
 		cur := p.Value.(MessageObject)
-		lines := getLines(cur.message, sx)
-		//fill_h("-", 0, sy-line_cursor, sx)
+		lines := ccg.GetLines(cur.message, sx)
+		//ccg.FillH("-", 0, sy-line_cursor, sx)
 
 		line_cursor += 1
 		for i := len(lines) - 1; i >= 0; i-- {
-			write(0, sy-line_cursor, lines[i])
+			ccg.Write(0, sy-line_cursor, lines[i])
 			line_cursor += 1
 		}
 		if p.Next() != nil {
 			if p.Next().Value.(MessageObject).sender == cur.sender {
 				line_cursor -= 1
 			} else {
-				write(0, sy-line_cursor, cur.sender)
-				fill_h("-", len(cur.sender), sy-line_cursor, sx)
+				ccg.Write(0, sy-line_cursor, cur.sender)
+				ccg.FillH("-", len(cur.sender), sy-line_cursor, sx)
 			}
 		} else {
-			write(0, sy-line_cursor, cur.sender)
-			fill_h("-", len(cur.sender), sy-line_cursor, sx)
+			ccg.Write(0, sy-line_cursor, cur.sender)
+			ccg.FillH("-", len(cur.sender), sy-line_cursor, sx)
 		}
 	}
 }
@@ -333,16 +334,16 @@ func displayInput(input string) int {
 	if input == "" {
 		termbox.SetCursor(0, sy-line_cursor)
 		line_cursor += 1
-		fill_h("-", 0, sy-line_cursor, sx)
+		ccg.FillH("-", 0, sy-line_cursor, sx)
 		return line_cursor
 	} else {
-		lines := getLines(input, sx)
+		lines := ccg.GetLines(input, sx)
 		for i := len(lines) - 1; i >= 0; i-- {
-			write(0, sy-line_cursor, lines[i])
+			ccg.Write(0, sy-line_cursor, lines[i])
 			line_cursor += 1
 		}
 		termbox.SetCursor(len(lines[len(lines)-1]), sy-1)
-		fill_h("-", 0, sy-line_cursor, sx)
+		ccg.FillH("-", 0, sy-line_cursor, sx)
 		return line_cursor
 	}
 	return 1

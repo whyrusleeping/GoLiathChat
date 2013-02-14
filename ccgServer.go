@@ -21,6 +21,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"./ccg"
 )
 
 type Server struct {
@@ -29,8 +30,8 @@ type Server struct {
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
 	listener   net.Listener
-	com        chan Packet
-	parse      chan Packet
+	com        chan ccg.Packet
+	parse      chan ccg.Packet
 }
 
 func (s *Server) LoginPrompt() {
@@ -44,7 +45,7 @@ func (s *Server) LoginPrompt() {
 	fmt.Scanf("%s", &handle)
 	fmt.Println("Password:")
 	fmt.Scanf("%s", &pass)
-	s.PassHashes[handle] = HashPassword(pass)
+	s.PassHashes[handle] = ccg.HashPassword(pass)
 	s.saveUserList("users.f")
 }
 
@@ -52,7 +53,7 @@ func StartServer() *Server {
 	s := Server{}
 	s.PassHashes = make(map[string][]byte)
 	s.LoginPrompt()
-	cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
+	cert, err := tls.LoadX509KeyPair("../certs/server.pem", "../certs/server.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
@@ -69,61 +70,61 @@ func StartServer() *Server {
 	if err != nil {
 		panic(err)
 	}
-	s.com = make(chan Packet)   //Channel for incoming messages
-	s.parse = make(chan Packet) //Channel for parsed messages to be sent
+	s.com = make(chan ccg.Packet)   //Channel for incoming messages
+	s.parse = make(chan ccg.Packet) //Channel for parsed messages to be sent
 	return &s
 }
 
-func (s *Server) HandleUser(u *User, outp chan<- Packet) {
+func (s *Server) HandleUser(u *ccg.User, outp chan<- ccg.Packet) {
 	log.Println("New connection!")
-	u.outp = outp
+	u.Outp = outp
 	checkByte := make([]byte, 1)
-	u.conn.Read(checkByte)
-	if checkByte[0] == tLogin {
+	u.Conn.Read(checkByte)
+	if checkByte[0] == ccg.TLogin {
 		if s.AuthUser(u) {
 			s.users.PushBack(u)
 			u.Listen()
 		} else {
-			u.conn.Close()
+			u.Conn.Close()
 		}
-	} else if checkByte[0] == tRegister {
-		uname, _ := ReadShortString(u.conn)
+	} else if checkByte[0] == ccg.TRegister {
+		uname, _ := ccg.ReadShortString(u.Conn)
 		key := make([]byte, 32)
-		u.conn.Read(key)
+		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
-		rp := NewPacket(tRegister, uname)
+		rp := ccg.NewPacket(ccg.TRegister, uname)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
-		u.conn.Close()
+		u.Conn.Close()
 	} else {
-		u.conn.Close()
+		u.Conn.Close()
 	}
 }
 
 //Authenticate the user against the list of users in the PassHashes map
-func (s *Server) AuthUser(u *User) bool {
-	//Read the length of the clients username, followed by the username
-	ulen := ReadInt32(u.conn)
+func (s *Server) AuthUser(u *ccg.User) bool {
+	//Read the length of the clients Username, followed by the Username
+	ulen := ccg.ReadInt32(u.Conn)
 	unamebuf := make([]byte, ulen)
-	u.conn.Read(unamebuf)
-	u.username = string(unamebuf)
+	u.Conn.Read(unamebuf)
+	u.Username = string(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
-	if _, ok := s.PassHashes[u.username]; !ok {
+	if _, ok := s.PassHashes[u.Username]; !ok {
 		fmt.Println("Not a registered user! Closing connection.")
 		return false
 	}
-	password := s.PassHashes[u.username]
+	password := s.PassHashes[u.Username]
 
 	//Generate a challenge and send it to the server
-	sc := GeneratePepper()
-	u.conn.Write(sc)
+	sc := ccg.GeneratePepper()
+	u.Conn.Write(sc)
 
 	//Read the clients password hash and their response to the challenge
 	hashA := make([]byte, 32)
 	cc := make([]byte, 32)
-	u.conn.Read(hashA)
-	u.conn.Read(cc)
+	u.Conn.Read(hashA)
+	u.Conn.Read(cc)
 
 	log.Println("Received hash and response from user.")
 
@@ -144,11 +145,11 @@ func (s *Server) AuthUser(u *User) bool {
 
 	//Generate a response to the client
 	sr, _ := scrypt.Key(password, combSalt, 16384, 4, 7, 32)
-	u.conn.Write(sr)
+	u.Conn.Write(sr)
 
 	//Read login flags
 	lflags := make([]byte, 1)
-	u.conn.Read(lflags)
+	u.Conn.Read(lflags)
 
 	log.Println("Authenticated!")
 	return true
@@ -159,15 +160,15 @@ func (s *Server) Listen() {
 	go s.MessageWriter()
 	go s.MessageHandler()
 	for {
-		conn, err := s.listener.Accept()
+		Conn, err := s.listener.Accept()
 		if err != nil {
 			log.Printf("server: accept: %s", err)
 			break
 		}
-		defer conn.Close()
-		log.Printf("server: accepted from %s", conn.RemoteAddr())
-		//_, ok := conn.(*tls.Conn) //Type assertion
-		u := UserWithConn(conn)
+		defer Conn.Close()
+		log.Printf("server: accepted from %s", Conn.RemoteAddr())
+		//_, ok := Conn.(*tls.Conn) //Type assertion
+		u := ccg.UserWithConn(Conn)
 		go s.HandleUser(u, s.com) //Asynchronously listen to the connection
 	}
 }
@@ -178,17 +179,17 @@ func (s *Server) MessageHandler() {
 	messages := *list.New()
 	for {
 		p := <-s.com
-		switch p.typ {
-		case tMessage:
+		switch p.Typ {
+		case ccg.TMessage:
 			messages.PushFront(p)
 			s.parse <- p
-		case tRegister:
-			s.regReqs[p.username] = []byte(p.payload)
-			p.payload = []byte(fmt.Sprintf("%s requests authentication."))
+		case ccg.TRegister:
+			s.regReqs[p.Username] = []byte(p.Payload)
+			p.Payload = []byte(fmt.Sprintf("%s requests authentication."))
 			s.parse <- p
-		case tAccept:
-			s.PassHashes[string(p.payload)] = s.regReqs[string(p.payload)]
-			delete(s.regReqs, p.username)
+		case ccg.TAccept:
+			s.PassHashes[string(p.Payload)] = s.regReqs[string(p.Payload)]
+			delete(s.regReqs, p.Username)
 			s.saveUserList("users.f")
 			//add the specified user to the user list
 		}
@@ -202,7 +203,7 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		for i := s.users.Front(); i != nil; i = i.Next() {
-			_, err := i.Value.(*User).conn.Write(p.getBytes())
+			_, err := i.Value.(*ccg.User).Conn.Write(p.GetBytes())
 			if err != nil {
 			}
 		}
@@ -212,7 +213,7 @@ func (s *Server) MessageWriter() {
 func (s *Server) loadUserList(filename string) {
 	f, _ := os.Open(filename)
 	for {
-		uname, err := ReadShortString(f)
+		uname, err := ccg.ReadShortString(f)
 		if err != nil {
 			break
 		}
@@ -225,7 +226,7 @@ func (s *Server) loadUserList(filename string) {
 func (s *Server) saveUserList(filename string) {
 	wrbuf := new(bytes.Buffer)
 	for name, phash := range s.PassHashes {
-		wrbuf.Write(BytesFromShortString(name))
+		wrbuf.Write(ccg.BytesFromShortString(name))
 		wrbuf.Write(phash)
 	}
 	f, _ := os.Create(filename)

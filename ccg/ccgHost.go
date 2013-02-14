@@ -1,4 +1,4 @@
-package main
+package ccg
 
 import (
 	"code.google.com/p/go.crypto/scrypt"
@@ -13,17 +13,17 @@ const (
 	fInvisible = 1 << 1
 )
 
-//Usage is simple, read messages from the reader, and write to the writer.
+//Usage is simple, read messages from the Reader, and write to the Writer.
 type Host struct {
 	conn           net.Conn
-	writer, reader chan Packet
+	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
 }
 
 func NewHost() *Host {
 	h := Host{}
-	cert, err := tls.LoadX509KeyPair("certs/client.pem", "certs/client.key")
+	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
@@ -41,8 +41,8 @@ func (h *Host) Connect(hostname string) error {
 	h.conn = conn
 	log.Println("client: connected to: ", h.conn.RemoteAddr())
 
-	h.reader = make(chan Packet)
-	h.writer = make(chan Packet)
+	h.Reader = make(chan Packet)
+	h.Writer = make(chan Packet)
 
 	return nil
 }
@@ -54,12 +54,12 @@ func (h *Host) Start() {
 
 //Sends a chat message to the server
 func (h *Host) Send(message string) {
-	mtype := tMessage
+	mtype := TMessage
 	if message[0] == '/' {
-		mtype = tCommand
+		mtype = TCommand
 	}
 	pack := NewPacket(mtype, message)
-	h.writer <- pack
+	h.Writer <- pack
 }
 
 func (h *Host) Cleanup() {
@@ -70,8 +70,8 @@ func (h *Host) Cleanup() {
 
 func (h *Host) writeMessages() {
 	for {
-		p := <-h.writer
-		_, err := h.conn.Write(p.getBytes())
+		p := <-h.Writer
+		_, err := h.conn.Write(p.GetBytes())
 		if err != nil {
 			//log.Printf("Failed to send message.\n")
 			continue
@@ -85,13 +85,13 @@ func (h *Host) readMessages() {
 		if err != nil {
 			panic(err)
 		}
-		h.reader <- p
+		h.Reader <- p
 	}
 }
 
 func (h *Host) Register(handle, password string) {
 	regByte := make([]byte, 1)
-	regByte[0] = tRegister
+	regByte[0] = TRegister
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
@@ -101,7 +101,7 @@ func (h *Host) Register(handle, password string) {
 // Handles login functions, returns true (successful) false (unsucessful)
 func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	loginByte := make([]byte, 1)
-	loginByte[0] = tLogin
+	loginByte[0] = TLogin
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.

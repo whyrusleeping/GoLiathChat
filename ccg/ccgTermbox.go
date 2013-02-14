@@ -1,4 +1,4 @@
-package main
+package ccg
 
 import (
 	"container/list"
@@ -7,14 +7,14 @@ import (
 )
 
 // Fills from x,y to x+width horizontally
-func fill_h(filler string, x int, y int, width int) {
+func FillH(filler string, x int, y int, width int) {
 	for c := x; c < width; c++ {
 		write_us(c, y, filler)
 	}
 }
 
 // Gets lines of a string, by a max length 
-func getLines(message string, length int) []string {
+func GetLines(message string, length int) []string {
 	lines := []string{}
 
 	for counter := 0; counter < len(message); {
@@ -56,21 +56,21 @@ func write_wrap_ch(x int, y int, mess string) {
 		if end > len(mess[start:len(mess)]) {
 			end = len(mess[start:len(mess)])
 		}
-		write(x, y+i, mess[start:end])
+		Write(x, y+i, mess[start:end])
 	}
 
 }
 
 //Writes to the center of the screen
-func write_center(y int, mess string) {
+func WriteCenter(y int, mess string) {
 	x, _ := termbox.Size()
 	write_us(((x / 2) - (len(mess) / 2)), y, mess)
 }
 
 //Write lines to the center of the screen
-func write_center_wrap(start_y int, lines []string) {
+func WriteCenterWrap(start_y int, lines []string) {
 	for i, line := range lines {
-		write_center(start_y+i, line)
+		WriteCenter(start_y+i, line)
 	}
 }
 
@@ -84,7 +84,7 @@ func write_us(x int, y int, mess string) {
 }
 
 // Displays text on the screen starting at x,y and cuts the end off
-func write(x int, y int, mess string) {
+func Write(x int, y int, mess string) {
 	sx, _ := termbox.Size()
 	if x+len(mess) > sx {
 		mess = mess[:sx]
@@ -96,17 +96,17 @@ func write(x int, y int, mess string) {
 }
 
 // Display a message in the center of the screen.
-func message_us(mess string) {
+func MessageUs(mess string) {
 	_, y := termbox.Size()
-	write_center(y/2, mess)
+	WriteCenter(y/2, mess)
 }
 
 // Clears the screen
-func clear() {
+func Clear() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
 //Flushes to the screen
-func flush() {
+func Flush() {
 	termbox.Flush()
 }

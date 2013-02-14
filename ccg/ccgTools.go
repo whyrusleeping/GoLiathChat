@@ -1,4 +1,4 @@
-package main
+package ccg
 
 import (
 	"bytes"
@@ -78,7 +78,7 @@ func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
 	}
 	buf := new(bytes.Buffer)
 	buf.Write([]byte("["))
-	buf.Write([]byte(u.username))
+	buf.Write([]byte(u.Username))
 	buf.Write([]byte("]"))
 	buf.Write(pHash)
 	return buf.Bytes()

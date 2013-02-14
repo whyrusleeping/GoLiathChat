@@ -1,9 +1,10 @@
-all: client server
+all: dir client server
 
-CLIFILES=ccgClient.go ccgPacket.go ccgHost.go ccgTermbox.go ccgTools.go ccgUser.go
-client: $(CLIFILES)
-	go build -o client $(CLIFILES)
+dir:
+	mkdir bin || true
 
-SERVFILES=ccgServer.go ccgPacket.go ccgTools.go ccgUser.go
-server: $(SERVFILES)
-	go build -o server $(SERVFILES)
+client: 
+	go build -o bin/client ccgClient.go
+
+server:
+	go build -o bin/server ccgServer.go

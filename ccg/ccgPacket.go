@@ -1,4 +1,4 @@
-package main
+package ccg
 
 import (
 	"bytes"
@@ -8,33 +8,33 @@ import (
 )
 
 const (
-	tQuit = byte(iota)
-	tMessage
-	tCommand
-	tLogin
-	tWhisper
-	tFile
-	tRegister
-	tInfo
-	tHistory
-	tAccept
+	TQuit = byte(iota)
+	TMessage
+	TCommand
+	TLogin
+	TWhisper
+	TFile
+	TRegister
+	TInfo
+	THistory
+	TAccept
 )
 
 type Packet struct {
-	typ       byte
-	timestamp int32
-	username  string
-	payload   []byte
+	Typ       byte
+	Timestamp int32
+	Username  string
+	Payload   []byte
 }
 
-func (p Packet) getBytes() []byte {
+func (p Packet) GetBytes() []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p.typ)
-	binary.Write(buf, binary.LittleEndian, int32(p.timestamp))
-	binary.Write(buf, binary.LittleEndian, uint16(len(p.username)))
-	binary.Write(buf, binary.LittleEndian, []byte(p.username))
-	binary.Write(buf, binary.LittleEndian, uint32(len(p.payload)))
-	binary.Write(buf, binary.LittleEndian, p.payload)
+	binary.Write(buf, binary.LittleEndian, p.Typ)
+	binary.Write(buf, binary.LittleEndian, int32(p.Timestamp))
+	binary.Write(buf, binary.LittleEndian, uint16(len(p.Username)))
+	binary.Write(buf, binary.LittleEndian, []byte(p.Username))
+	binary.Write(buf, binary.LittleEndian, uint32(len(p.Payload)))
+	binary.Write(buf, binary.LittleEndian, p.Payload)
 	return buf.Bytes()
 }
 
@@ -50,29 +50,29 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	if err != nil {
 		return p, err
 	}
-	p.typ = flagBuf[0]
+	p.Typ = flagBuf[0]
 	conn.Read(timeBuf)
 	buf := bytes.NewBuffer(timeBuf)
-	binary.Read(buf, binary.LittleEndian, &p.timestamp)
+	binary.Read(buf, binary.LittleEndian, &p.Timestamp)
 	conn.Read(lenBuf)
 	buf = bytes.NewBuffer(lenBuf)
 	binary.Read(buf, binary.LittleEndian, &userLen)
 	userBuf := make([]byte, userLen)
 	conn.Read(userBuf)
-	p.username = string(userBuf)
+	p.Username = string(userBuf)
 	conn.Read(timeBuf)
 	buf = bytes.NewBuffer(timeBuf)
 	binary.Read(buf, binary.LittleEndian, &payLen)
 	strBuf := make([]byte, payLen)
 	conn.Read(strBuf)
-	p.payload = strBuf
+	p.Payload = strBuf
 	return p, nil
 }
 
-func NewPacket(mtype byte, payload string) Packet {
+func NewPacket(mtype byte, Payload string) Packet {
 	p := Packet{}
-	p.typ = mtype
-	p.timestamp = int32(time.Now().Unix())
-	p.payload = []byte(payload)
+	p.Typ = mtype
+	p.Timestamp = int32(time.Now().Unix())
+	p.Payload = []byte(Payload)
 	return p
 }
