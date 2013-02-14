@@ -9,15 +9,15 @@ import (
 
 const (
 	tQuit    = iota
-	tMessage = iota
-	tCommand = iota
-	tLogin   = iota
-	tWhisper = iota
-	tFile    = iota
-	tRegister= iota
-	tInfo	 = iota
-	tHistory = iota
-	tAccept  = iota
+	tMessage
+	tCommand
+	tLogin
+	tWhisper
+	tFile
+	tRegister
+	tInfo
+	tHistory
+	tAccept
 )
 
 type Packet struct {

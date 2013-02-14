@@ -61,7 +61,7 @@ func main() {
 func displayLoginWindow(serv *Host) (bool, bool) {
 	quit := false
 	login := false
-	
+
 	name := ""
 	pass := ""
 	login_err := ""

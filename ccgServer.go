@@ -34,6 +34,10 @@ type Server struct {
 }
 
 func (s *Server) LoginPrompt() {
+	s.loadUserList("users.f")
+	if len(s.PassHashes) > 0 {
+		return
+	}
 	var handle string
 	var pass string
 	fmt.Println("Admin Username:")
@@ -41,6 +45,7 @@ func (s *Server) LoginPrompt() {
 	fmt.Println("Password:")
 	fmt.Scanf("%s",&pass)
 	s.PassHashes[handle] = HashPassword(pass)
+	s.saveUserList("users.f")
 }
 
 func StartServer() *Server {
@@ -60,6 +65,7 @@ func StartServer() *Server {
 		log.Fatalf("server: listen: %s", err)
 	}
 	s.users = list.New()
+	s.loadUserList("users.f")
 	if err != nil {
 		panic(err)
 	}
@@ -126,7 +132,6 @@ func (s *Server) AuthUser(u *User) bool {
 	copy(combSalt[len(sc):], cc)
 
 	hashAver, _ := scrypt.Key(password, combSalt, 16384, 8, 1, 32)
-
 	//Verify keys are the same.
 	ver := true
 	for i := 0; ver && i < len(hashA); i++ {
@@ -184,6 +189,7 @@ func (s *Server) MessageHandler() {
 		case tAccept:
 			s.PassHashes[string(p.payload)] = s.regReqs[string(p.payload)]
 			delete(s.regReqs, p.username)
+			s.saveUserList("users.f")
 			//add the specified user to the user list
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
@@ -223,7 +229,10 @@ func (s *Server) saveUserList(filename string) {
 		wrbuf.Write(phash)
 	}
 	f,_ := os.Create(filename)
-	f.Write(wrbuf.Bytes())
+	_, err := f.Write(wrbuf.Bytes())
+	if err != nil {
+		panic(err)
+	}
 	f.Close()
 }
 

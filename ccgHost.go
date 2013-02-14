@@ -41,14 +41,6 @@ func (h *Host) Connect(hostname string) error {
 	h.conn = conn
 	log.Println("client: connected to: ", h.conn.RemoteAddr())
 
-	/*
-		state := conn.ConnectionState()
-		for _,v := range state.PeerCertificates {
-			fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
-			fmt.Println(v.Subject)
-		}
-	*/
-
 	h.reader = make(chan Packet)
 	h.writer = make(chan Packet)
 
@@ -62,7 +54,11 @@ func (h *Host) Start() {
 
 //Sends a chat message to the server
 func (h *Host) Send(message string) {
-	pack := NewPacket(1, message)
+	mtype := tMessage
+	if message[0] == '/' {
+		mtype = tCommand
+	}
+	pack := NewPacket(mtype, message)
 	h.writer <- pack
 }
 
@@ -77,7 +73,7 @@ func (h *Host) writeMessages() {
 		p := <-h.writer
 		_, err := h.conn.Write(p.getBytes())
 		if err != nil {
-			log.Printf("Failed to send message.\n")
+			//log.Printf("Failed to send message.\n")
 			continue
 		}
 	}
@@ -100,7 +96,6 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
 	h.conn.Write(phash)
-
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
