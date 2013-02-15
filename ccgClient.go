@@ -12,10 +12,10 @@ Go Command Chat
 package main
 
 import (
+	"./ccg"
 	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
-	"./ccg"
 )
 
 type MessageObject struct {
@@ -68,100 +68,92 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	login_err := ""
 	// 0 Username 
 	// 1 Password 
-	// 2 Options
+	// 2 Login
+	// 3 Options
+	// 4 Register
 	box := 0
 	//login_message := ""
-	keyboard := make(chan termbox.Event)
+	termboxEvent := make(chan termbox.Event)
+
+	eventHandler := ccg.NewTermboxEventHandler()
+
+	eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
+		if box == 0 {
+			box = 1
+		} else if box == 1 {
+			if name == "" {
+				login_err = "Username can not be blank."
+			} else if pass == "" {
+				login_err = "Password can not be blank."
+			} else {
+				login_err = "Logging in..."
+				updateLoginWindow(name, pass, box, login_err)
+				login, login_err = serv.Login(name, pass, 0)
+			}
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
+		quit = true
+		login = false
+	}
+	eventHandler.KeyEvents[termbox.KeyCtrlQ] = func(_ termbox.Event) {
+		quit = true
+		login = false
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace] = func(_ termbox.Event) {
+		if box == 0 && len(name) > 0 { // Name
+			name = name[0 : len(name)-1]
+		} else if box == 1 && len(pass) > 0 { // Password
+			pass = pass[0 : len(pass)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace2] = func(_ termbox.Event) {
+		if box == 0 && len(name) > 0 { // Name
+			name = name[0 : len(name)-1]
+		} else if box == 1 && len(pass) > 0 { // Password
+			pass = pass[0 : len(pass)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
+
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
+
+	}
+	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
+		if box == 0 && len(name) < 64 {
+			name += " "
+		} else if box == 1 && len(pass) < 64 {
+			pass += " "
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyTab] = func(_ termbox.Event) {
+
+	}
+	eventHandler.OnDefault = func(event termbox.Event) {
+		if event.Ch != 0 {
+			if box == 0 && len(name) < 64 {
+				name += string(event.Ch)
+			} else if box == 1 && len(pass) < 64 {
+				pass += string(event.Ch)
+			}
+		}
+	}
 
 	updateLoginWindow(name, pass, box, login_err)
 
 	// Start the goroutines
-	go keyboardEventPoller(keyboard)
+	go termboxEventPoller(termboxEvent)
 
 	for !quit && !login {
 		select {
-		case keyEvent := <-keyboard:
-			login_err = ""
-			switch keyEvent.Type {
-			case termbox.EventKey:
-				// Safe Exit (Waits for last message to send)
-				if keyEvent.Key == termbox.KeyCtrlQ {
-					ccg.Clear()
-					ccg.MessageUs("Exiting...")
-					ccg.Flush()
-					time.Sleep(time.Second * 2)
-					quit = true
-					login = false
-					break
-					// Unsafe Exit (Does not wait)
-				} else if keyEvent.Key == termbox.KeyCtrlC {
-					ccg.Clear()
-					ccg.Flush()
-					quit = true
-					login = false
-					break
-				} else if keyEvent.Key == termbox.KeyEnter {
-					// If a box is empty, say no.
-					if box == 0 {
-						box = 1
-					} else if box == 1 {
-						if name == "" {
-							login_err = "Username can not be blank."
-						} else if pass == "" {
-							login_err = "Password can not be blank."
-						} else {
-							login_err = "Logging in..."
-							updateLoginWindow(name, pass, box, login_err)
-							login, login_err = serv.Login(name, pass, 0)
-						}
-					}
-				} else if keyEvent.Key == termbox.KeyBackspace {
-					// Remove a ch
-					if box == 0 && len(name) > 0 { // Name
-						name = name[0 : len(name)-1]
-					} else if box == 1 && len(pass) > 0 { // Password
-						pass = pass[0 : len(pass)-1]
-					}
-					// Remove a ch
-				} else if keyEvent.Key == termbox.KeyBackspace2 {
-					// Remove a ch
-					if box == 0 && len(name) > 0 { // Name
-						name = name[0 : len(name)-1]
-					} else if box == 1 && len(pass) > 0 { // Password
-						pass = pass[0 : len(pass)-1]
-					}
-				} else if keyEvent.Key == termbox.KeyArrowUp {
-					// Move up a box
-				} else if keyEvent.Key == termbox.KeyArrowDown {
-					// Move down a box
-				} else if keyEvent.Key == termbox.KeyArrowRight {
-					// Update the cursor position
-				} else if keyEvent.Key == termbox.KeyArrowLeft {
-					// Update the cursor position
-				} else if keyEvent.Key == termbox.KeySpace {
-					if box == 0 && len(name) < 64 {
-						name += " "
-					} else if box == 1 && len(pass) < 64 {
-						pass += " "
-					}
-				} else {
-					if keyEvent.Ch != 0 {
-						if box == 0 && len(name) < 64 {
-							name += string(keyEvent.Ch)
-						} else if box == 1 && len(pass) < 64 {
-							pass += string(keyEvent.Ch)
-						}
-					}
-				}
-				updateLoginWindow(name, pass, box, login_err)
-			case termbox.EventResize:
-				updateLoginWindow(name, pass, box, login_err)
-			case termbox.EventError:
-				panic(keyEvent.Err)
-			}
+		case event := <-termboxEvent:
+			ccg.TermboxSwitch(event, eventHandler)
+			updateLoginWindow(name, pass, box, login_err)
 		}
 
 	}
+
 	updateLoginWindow(name, pass, box, login_err)
 
 	return quit, login
@@ -193,78 +185,78 @@ func displayChatWindow(serv *ccg.Host) {
 	running := true
 	start_message := 0
 	messages := list.New()
-	keyboard := make(chan termbox.Event)
+	termboxEvent := make(chan termbox.Event)
+	eventHandler := ccg.NewTermboxEventHandler()
+
+	eventHandler.KeyEvents[termbox.KeyCtrlQ] = func(_ termbox.Event) {
+		ccg.Clear()
+		ccg.MessageUs("Exiting...")
+		ccg.Flush()
+		time.Sleep(time.Second * 2)
+		running = false
+	}
+	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
+		ccg.Clear()
+		ccg.Flush()
+		running = false
+
+	}
+	eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
+		if input != "" {
+			serv.Send(input)
+			input = ""
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace] = func(_ termbox.Event) {
+		if len(input) > 0 {
+			input = input[0 : len(input)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace2] = func(_ termbox.Event) {
+		if len(input) > 0 {
+			input = input[0 : len(input)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
+		if start_message < messages.Len() {
+			start_message += 1
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
+		if start_message > 0 {
+			start_message -= 1
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
+		if len(input) <= 160 {
+			input += " "
+		}
+	}
+	eventHandler.OnDefault = func(keyEvent termbox.Event) {
+	  if keyEvent.Ch != 0 {
+		  if len(input) <= 160 {
+			  input += string(keyEvent.Ch)
+		  }
+	  }
+	}
+	eventHandler.OnResize = func(_ termbox.Event) {
+
+	}
+
 	// Display the window
 	ccg.Clear()
 	updateChatWindow(input, messages, start_message)
 	ccg.Flush()
 	// Start the goroutines
-	go keyboardEventPoller(keyboard)
+	go termboxEventPoller(termboxEvent)
 	// Run the main loop
 	for running {
 		select {
-		case keyEvent := <-keyboard:
-			switch keyEvent.Type {
-			case termbox.EventKey:
-				// Safe Exit (Waits for last message to send)
-				if keyEvent.Key == termbox.KeyCtrlQ {
-					ccg.Clear()
-					ccg.MessageUs("Exiting...")
-					ccg.Flush()
-					time.Sleep(time.Second * 2)
-					running = false
-					break
-					// Unsafe Exit (Does not wait)
-				} else if keyEvent.Key == termbox.KeyCtrlC {
-					ccg.Clear()
-					ccg.Flush()
-					running = false
-					break
-				} else if keyEvent.Key == termbox.KeyEnter {
-					if input != "" {
-						serv.Send(input)
-						input = ""
-					}
-				} else if keyEvent.Key == termbox.KeyBackspace {
-					if len(input) > 0 {
-						input = input[0 : len(input)-1]
-					}
-				} else if keyEvent.Key == termbox.KeyBackspace2 {
-					if len(input) > 0 {
-						input = input[0 : len(input)-1]
-					}
-				} else if keyEvent.Key == termbox.KeyArrowUp {
-					if start_message < messages.Len() {
-						start_message += 1
-					}
-				} else if keyEvent.Key == termbox.KeyArrowDown {
-					if start_message > 0 {
-						start_message -= 1
-					}
-				} else if keyEvent.Key == termbox.KeyArrowRight {
-					//Do nothing for now
-				} else if keyEvent.Key == termbox.KeyArrowLeft {
-					//Do nothing for now
-				} else if keyEvent.Key == termbox.KeySpace {
-					if len(input) <= 160 {
-						input += " "
-					}
-					//Do nothing for now
-				} else {
-					if len(input) <= 160 {
-						input += string(keyEvent.Ch)
-					}
-				}
-				ccg.Clear()
-				updateChatWindow(input, messages, start_message)
-				ccg.Flush()
-			case termbox.EventResize:
-				ccg.Clear()
-				updateChatWindow(input, messages, start_message)
-				ccg.Flush()
-			case termbox.EventError:
-				panic(keyEvent.Err)
-			}
+		case event := <-termboxEvent:
+			ccg.TermboxSwitch(event, eventHandler)
+			ccg.Clear()
+			updateChatWindow(input, messages, start_message)
+			ccg.Flush()
 		case serverEvent := <-serv.Reader:
 			message := MessageObject{string(serverEvent.Payload), serverEvent.Username, time.Now().Second()}
 			messages.PushFront(message)
@@ -276,7 +268,7 @@ func displayChatWindow(serv *ccg.Host) {
 }
 
 // Polls for keyboard events
-func keyboardEventPoller(event chan<- termbox.Event) {
+func termboxEventPoller(event chan<- termbox.Event) {
 	for {
 		event <- termbox.PollEvent()
 	}
