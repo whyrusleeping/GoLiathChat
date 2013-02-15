@@ -13,9 +13,10 @@ const (
 	TCommand
 	TLogin
 	TWhisper
+	TFileInfo
 	TFile
 	TRegister
-	TInfo
+	TServerInfo
 	THistory
 	TAccept
 )

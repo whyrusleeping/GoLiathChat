@@ -21,6 +21,7 @@ type Server struct {
 	listener   net.Listener
 	com        chan Packet
 	parse      chan Packet
+	uplFiles   map[string]*File
 }
 
 func (s *Server) LoginPrompt() {
