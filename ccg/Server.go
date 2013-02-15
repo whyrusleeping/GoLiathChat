@@ -6,6 +6,7 @@ import (
 	"container/list"
 	"crypto/rand"
 	"crypto/tls"
+	"strings"
 	"fmt"
 	"log"
 	"net"
@@ -62,6 +63,7 @@ func StartServer() *Server {
 	s.parse = make(chan Packet) //Channel for parsed messages to be sent
 	return &s
 }
+
 
 func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	log.Println("New connection!")
@@ -143,6 +145,7 @@ func (s *Server) AuthUser(u *User) bool {
 	return true
 }
 
+//Listen for new connections and handle them accordingly
 func (s *Server) Listen() {
 	log.Print("server: listening")
 	go s.MessageWriter()
@@ -161,8 +164,23 @@ func (s *Server) Listen() {
 	}
 }
 
+//Handles all incoming user commands
 func (s *Server) command(p Packet) {
-	
+	cmd := extractCommand(string(p.Payload))
+	args := strings.Split(string(p.Payload)," ")
+	fmt.Println(cmd)
+	switch cmd {
+	case "accept":
+		if len(args) < 2 {
+			log.Println("No user specified for command 'accept'")
+		} else {
+			s.PassHashes[args[1]] = s.regReqs[args[1]]
+			delete(s.regReqs, args[1])
+			log.Printf("%s registered!\n", args[1])
+		}
+	default:
+		log.Println("Command unrecognized")
+	}
 }
 
 //Receives packets parsed from incoming users and 

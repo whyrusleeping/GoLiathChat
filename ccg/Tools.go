@@ -87,5 +87,8 @@ func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
 
 func extractCommand(pay string) string {
 	i := strings.Index(pay, " ")
+	if i < 0 {
+		i = len(pay)
+	}
 	return pay[1:i]
 }
