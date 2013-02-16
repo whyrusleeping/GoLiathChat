@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
+	"fmt"
 	"time"
 )
 
@@ -115,6 +116,7 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
+	fmt.Println(phash)
 	h.conn.Write(phash)
 }
 
@@ -157,7 +159,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 		ver = ver && (sr[i] == srVer[i])
 	}
 	if !ver {
-		return false, "Invalid responce from server"
+		return false, "Invalid response from server"
 	}
 	//Send login flags to the server
 	loginByte[0] = lflags

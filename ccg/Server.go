@@ -84,7 +84,8 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 		key := make([]byte, 32)
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
-		rp := NewPacket(TRegister, []byte(uname))
+		rp := NewPacket(TRegister, key)
+		rp.Username = uname
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
@@ -177,6 +178,8 @@ func (s *Server) command(p Packet) {
 			log.Println("No user specified for command 'accept'")
 		} else {
 			s.PassHashes[args[1]] = s.regReqs[args[1]]
+			fmt.Printf("|%s|\n",args[1])
+			fmt.Println(s.regReqs[args[1]])
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 		}
@@ -196,14 +199,9 @@ func (s *Server) MessageHandler() {
 			messages.PushFront(p)
 			s.parse <- p
 		case TRegister:
-			s.regReqs[p.Username] = []byte(p.Payload)
-			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", string(p.Payload)))
+			s.regReqs[p.Username] = p.Payload
+			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
 			s.parse <- p
-		case TAccept:
-			s.PassHashes[string(p.Payload)] = s.regReqs[string(p.Payload)]
-			delete(s.regReqs, p.Username)
-			s.saveUserList("users.f")
-			//add the specified user to the user list
 		case TCommand:
 			s.command(p)
 		case TFileInfo:
