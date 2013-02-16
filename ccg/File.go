@@ -7,6 +7,7 @@ import (
 
 type File struct {
 	filename string
+	blocks int32
 	data []*block
 }
 

@@ -14,7 +14,7 @@ import (
 )
 
 type Server struct {
-	users      *list.List
+	users      map[string]*User
 	messages   *list.List
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
@@ -55,13 +55,13 @@ func StartServer() *Server {
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}
-	s.users = list.New()
+	s.users = make(map[string]*User)
 	s.loadUserList("users.f")
 	if err != nil {
 		panic(err)
 	}
-	s.com = make(chan Packet)   //Channel for incoming messages
-	s.parse = make(chan Packet) //Channel for parsed messages to be sent
+	s.com = make(chan Packet, 10)   //Channel for incoming messages
+	s.parse = make(chan Packet, 10) //Channel for parsed messages to be sent
 	return &s
 }
 
@@ -73,7 +73,7 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	u.Conn.Read(checkByte)
 	if checkByte[0] == TLogin {
 		if s.AuthUser(u) {
-			s.users.PushBack(u)
+			s.users[u.Username] = u
 			u.Listen()
 		} else {
 			u.Conn.Close()
@@ -83,7 +83,7 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 		key := make([]byte, 32)
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
-		rp := NewPacket(TRegister, uname)
+		rp := NewPacket(TRegister, []byte(uname))
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
@@ -205,6 +205,19 @@ func (s *Server) MessageHandler() {
 			//add the specified user to the user list
 		case TCommand:
 			s.command(p)
+		case TFileInfo:
+			buf := bytes.NewBuffer(p.Payload)
+			fname,_ := ReadShortString(buf)
+			nblocks := ReadInt32(buf)
+			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+		case TFile:
+			buf := bytes.NewBuffer(p.Payload)
+			fname,_ := ReadShortString(buf)
+			packID := ReadInt32(buf)
+			nbytes := ReadInt32(buf)
+			blck := NewBlock(int(nbytes))
+			buf.Read(blck.data)
+			s.uplFiles[fname].data[packID] = blck
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}
@@ -215,14 +228,17 @@ func (s *Server) MessageHandler() {
 func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
-		for i := s.users.Front(); i != nil; i = i.Next() {
-			_, err := i.Value.(*User).Conn.Write(p.GetBytes())
+		b := p.GetBytes()
+		for _,u := range s.users {
+			_, err := u.Conn.Write(b)
 			if err != nil {
+				log.Printf("Packet failed to send to %.\n", u.Username)
 			}
 		}
 	}
 }
 
+//Loads list of user
 func (s *Server) loadUserList(filename string) {
 	f, _ := os.Open(filename)
 	for {

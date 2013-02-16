@@ -31,3 +31,4 @@ func (u *User) Listen() {
 		u.Outp <- p
 	}
 }
+

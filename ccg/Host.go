@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
+	"time"
 )
 
 //Login Flags
@@ -19,6 +20,7 @@ type Host struct {
 	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
+	files			map[string]*File
 }
 
 func NewHost() *Host {
@@ -58,16 +60,18 @@ func (h *Host) Send(message string) {
 	if message[0] == '/' {
 		mtype = TCommand
 	}
-	pack := NewPacket(mtype, message)
+	pack := NewPacket(mtype, []byte(message))
 	h.Writer <- pack
 }
 
+//Perform all cleanup of connection
 func (h *Host) Cleanup() {
 	if h.conn != nil {
 		h.conn.Close()
 	}
 }
 
+//goroutine for writing out messages and handling errors
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.Writer
@@ -77,6 +81,22 @@ func (h *Host) writeMessages() {
 			continue
 		}
 	}
+}
+
+func (h *Host) sendFile(path string) error {
+	fi, err := LoadFile(path)
+	if err != nil {
+		return err
+	}
+	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
+	go func() {
+		for i := 0; i < len(fi.data); i++ {
+			h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
+		}
+		//Wait two milliseconds between sendings
+		time.Sleep(time.Millisecond * 2)
+	}()
+	return nil
 }
 
 func (h *Host) readMessages() {

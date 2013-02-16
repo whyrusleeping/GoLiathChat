@@ -58,7 +58,6 @@ func write_wrap_ch(x int, y int, mess string) {
 		}
 		Write(x, y+i, mess[start:end])
 	}
-
 }
 
 //Writes to the center of the screen

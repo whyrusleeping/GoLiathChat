@@ -70,10 +70,10 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	return p, nil
 }
 
-func NewPacket(mtype byte, Payload string) Packet {
+func NewPacket(mtype byte, Payload []byte) Packet {
 	p := Packet{}
 	p.Typ = mtype
 	p.Timestamp = int32(time.Now().Unix())
-	p.Payload = []byte(Payload)
+	p.Payload = Payload
 	return p
 }
