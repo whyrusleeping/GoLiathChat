@@ -56,6 +56,7 @@ func StartServer() *Server {
 		log.Fatalf("server: listen: %s", err)
 	}
 	s.users = make(map[string]*User)
+	s.regReqs = make(map[string][]byte)
 	s.loadUserList("users.f")
 	if err != nil {
 		panic(err)
@@ -196,7 +197,7 @@ func (s *Server) MessageHandler() {
 			s.parse <- p
 		case TRegister:
 			s.regReqs[p.Username] = []byte(p.Payload)
-			p.Payload = []byte(fmt.Sprintf("%s requests authentication."))
+			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", string(p.Payload)))
 			s.parse <- p
 		case TAccept:
 			s.PassHashes[string(p.Payload)] = s.regReqs[string(p.Payload)]
