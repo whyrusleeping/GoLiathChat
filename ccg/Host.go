@@ -84,7 +84,8 @@ func (h *Host) writeMessages() {
 	}
 }
 
-func (h *Host) sendFile(path string) error {
+//Uploads the given file to the server
+func (h *Host) SendFile(path string) error {
 	fi, err := LoadFile(path)
 	if err != nil {
 		return err
