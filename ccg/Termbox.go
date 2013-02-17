@@ -6,6 +6,38 @@ import (
 	"strings"
 )
 
+type TermboxEventHandler struct {
+  KeyEvents map[termbox.Key]func(termbox.Event)
+  OnResize func(termbox.Event)
+  OnError func(termbox.Event)
+  OnDefault func(termbox.Event)
+}
+
+func NewTermboxEventHandler() *TermboxEventHandler {
+  teh := TermboxEventHandler{}
+  teh.KeyEvents = make(map[termbox.Key]func(termbox.Event))
+  return &teh
+}
+
+func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
+	switch event.Type {
+	case termbox.EventKey:
+		if functions.KeyEvents[event.Key] != nil {
+			functions.KeyEvents[event.Key](event)
+		} else {
+		  functions.OnDefault(event)
+		}
+	case termbox.EventResize:
+		if functions.OnResize != nil {
+			functions.OnResize(event)
+		}
+	case termbox.EventError:
+		if functions.OnError != nil {
+			functions.OnError(event)
+		}
+	}
+}
+
 // Fills from x,y to x+width horizontally
 func FillH(filler string, x int, y int, width int) {
 	for c := x; c < width; c++ {
