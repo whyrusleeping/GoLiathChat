@@ -2,5 +2,6 @@
 *.swp
 users.f
 bin/*
+tests/*
 certs/*
 .tags
