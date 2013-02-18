@@ -57,6 +57,7 @@ func StartServer() *Server {
 	}
 	s.users = make(map[string]*User)
 	s.regReqs = make(map[string][]byte)
+	s.uplFiles = make(map[string]*File)
 	s.loadUserList("users.f")
 	if err != nil {
 		panic(err)
@@ -183,6 +184,9 @@ func (s *Server) command(p Packet) {
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 		}
+	case "dl":
+		//User wishes to download a file
+		//So send it to em?
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -207,6 +211,7 @@ func (s *Server) MessageHandler() {
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname,_ := ReadShortString(buf)
+			fmt.Printf("User %s wants to upload %s.\n",p.Username,fname)
 			nblocks := ReadInt32(buf)
 			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
 		case TFile:
@@ -216,6 +221,7 @@ func (s *Server) MessageHandler() {
 			nbytes := ReadInt32(buf)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
+			fmt.Printf("Received data: %s\n", string(blck.data))
 			s.uplFiles[fname].data[packID] = blck
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)

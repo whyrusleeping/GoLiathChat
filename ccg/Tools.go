@@ -73,18 +73,6 @@ func HashPassword(password string) []byte {
 	return pHash
 }
 
-func GetUserBytesForAuthFile(u *User, pHash []byte) []byte {
-	if len(pHash) != 32 {
-		return nil
-	}
-	buf := new(bytes.Buffer)
-	buf.Write([]byte("["))
-	buf.Write([]byte(u.Username))
-	buf.Write([]byte("]"))
-	buf.Write(pHash)
-	return buf.Bytes()
-}
-
 func extractCommand(pay string) string {
 	i := strings.Index(pay, " ")
 	if i < 0 {

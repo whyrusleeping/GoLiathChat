@@ -3,6 +3,7 @@ package ccg
 import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
+	"bytes"
 	"log"
 	"net"
 	"fmt"
@@ -90,6 +91,7 @@ func (h *Host) SendFile(path string) error {
 	if err != nil {
 		return err
 	}
+	h.files[path] = fi
 	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
 	go func() {
 		for i := 0; i < len(fi.data); i++ {
@@ -107,6 +109,25 @@ func (h *Host) readMessages() {
 		if err != nil {
 			panic(err)
 		}
+		//No error, continue on!
+		switch p.Typ {
+			case TFileInfo:
+				buf := bytes.NewBuffer(p.Payload)
+				fname, _ := ReadShortString(buf)
+				nblocks := ReadInt32(buf)
+				h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			case TFile:
+				buf := bytes.NewBuffer(p.Payload)
+				fname,_ := ReadShortString(buf)
+				bid := ReadInt32(buf)
+				blockSize := ReadInt32(buf)
+				blck := NewBlock(int(blockSize))
+				buf.Read(blck.data)
+				h.files[fname].data[bid] = blck
+				if h.files[fname].IsComplete() {
+					h.files[fname].Save()
+				}
+			}
 		h.Reader <- p
 	}
 }
