@@ -59,6 +59,10 @@ func main() {
 	}
 }
 
+// **********************************************
+// **************** Login Window ****************
+// ********************************************** 
+
 func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	quit := false
 	login := false
@@ -72,10 +76,40 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	// 3 Options
 	// 4 Register
 	box := 0
+	
+	const max_box = 4
+  const min_box = 0
+  
+	
 	//login_message := ""
 	termboxEvent := make(chan termbox.Event)
+	
+	// Update the login window
+  updateWindow := func() {
+	  ccg.Clear()
+	  sx, sy := termbox.Size()
+
+	  name_lines := ccg.GetLines(name, sx-2)
+	  pass_lines := ccg.GetLines(pass, sx-2)
+	  err_lines := ccg.GetLines(login_err, sx-2)
+
+	  ccg.WriteCenter((sy/2)-len(name_lines)-1, "Username:")
+	  ccg.WriteCenterWrap((sy/2)-len(name_lines), name_lines)
+	  ccg.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
+	  ccg.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
+
+	  ccg.WriteCenterWrap(sy-len(err_lines), err_lines)
+	  ccg.Flush()
+  }
 
 	eventHandler := ccg.NewTermboxEventHandler()
+	
+	
+	eventHandler.KeyEvents[termbox.KeyCtrlR] = func(_ termbox.Event) {
+	  displayRegisterWindow(serv, termboxEvent)
+	  updateWindow()
+	}
+	
 
 	eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
 		if box == 0 {
@@ -87,7 +121,7 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 				login_err = "Password can not be blank."
 			} else {
 				login_err = "Logging in..."
-				updateLoginWindow(name, pass, box, login_err)
+				updateWindow()
 				login, login_err = serv.Login(name, pass, 0)
 			}
 		}
@@ -115,10 +149,18 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
-
+	  if box > min_box {
+	    box -= 1
+	  } else {
+	    box = max_box
+	  }
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
-
+    if box < max_box {
+      box += 1
+    } else {
+      box = min_box
+     }
 	}
 	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
 		if box == 0 && len(name) < 64 {
@@ -139,8 +181,8 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 			}
 		}
 	}
-
-	updateLoginWindow(name, pass, box, login_err)
+	
+  updateWindow()
 
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
@@ -149,35 +191,137 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 		select {
 		case event := <-termboxEvent:
 			ccg.TermboxSwitch(event, eventHandler)
-			updateLoginWindow(name, pass, box, login_err)
+			updateWindow()
 		}
-
 	}
 
-	updateLoginWindow(name, pass, box, login_err)
+	updateWindow()
 
 	return quit, login
 }
 
-// Update the login window
-func updateLoginWindow(name string, pass string, box int, err string) {
-	ccg.Clear()
-	sx, sy := termbox.Size()
+// **********************************************
+// ************** Register Window ***************
+// ********************************************** 
 
-	name_lines := ccg.GetLines(name, sx-2)
-	pass_lines := ccg.GetLines(pass, sx-2)
-	err_lines := ccg.GetLines(err, sx-2)
+func displayRegisterWindow(serv *ccg.Host, termboxEvent chan termbox.Event) {
+  quit := false
+  done := false
+  username := ""
+  password := ""
+  passwordVerify := ""
+  const max_box = 2
+  const min_box = 0
+  //  0 = Username
+  //  1 = Password  
+  //  2 = Password Verify
+  box := min_box 
 
-	ccg.WriteCenter((sy/2)-len(name_lines)-1, "Username:")
-	ccg.WriteCenterWrap((sy/2)-len(name_lines), name_lines)
-	ccg.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
-	ccg.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
+	eventHandler := ccg.NewTermboxEventHandler()
+  
+  updateWindow := func() {
+    ccg.Clear()
+	  sx, _ := termbox.Size()
 
-	ccg.WriteCenterWrap(sy-len(err_lines), err_lines)
-	ccg.Flush()
+	  username_lines := ccg.GetLines(username, sx-2)
+	  password_lines := ccg.GetLines(password, sx-2)
+	  passwordVerify_lines := ccg.GetLines(passwordVerify, sx-2)
+
+    ccg.WriteCenter(1, "Username")
+    ccg.WriteCenterWrap(2, username_lines)
+    ccg.WriteCenter(4, "Password")
+    ccg.WriteCenterWrap(5, password_lines)
+    ccg.WriteCenter(7, "Password Verify")
+    ccg.WriteCenterWrap(8, passwordVerify_lines)
+    
+	  ccg.Flush()
+  }
+  
+  eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
+		if box == 0 {
+			box = 1
+		} else if box == 1 {
+      box = 2
+		} else if box == 2 {
+		  if(password == passwordVerify) {
+		    serv.Register(username, password)
+		  }
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
+		quit = true
+		done = true
+	}
+	eventHandler.KeyEvents[termbox.KeyCtrlQ] = func(_ termbox.Event) {
+		quit = true
+		done = true
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace] = func(_ termbox.Event) {
+		if box == 0 && len(username) > 0 { // Name
+			username = username[0 : len(username)-1]
+		} else if box == 1 && len(password) > 0 { // Password
+			password = password[0 : len(password)-1]
+		} else if box == 1 && len(passwordVerify) > 0 { // Password
+			passwordVerify = passwordVerify[0 : len(passwordVerify)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyBackspace2] = func(_ termbox.Event) {
+		if box == 0 && len(username) > 0 { // Name
+			username = username[0 : len(username)-1]
+		} else if box == 1 && len(password) > 0 { // Password
+			password = password[0 : len(password)-1]
+		} else if box == 1 && len(passwordVerify) > 0 { // Password
+			passwordVerify = passwordVerify[0 : len(passwordVerify)-1]
+		}
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
+	  if box > min_box {
+	    box -= 1
+	  } else {
+	    box = max_box
+	  }
+	}
+	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
+    if box < max_box {
+      box += 1
+    } else {
+      box = min_box
+     }
+	}
+	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
+		if box == 1 && len(password) < 64 {
+			password += " "
+		} else if box == 2 && len(passwordVerify) < 64 {
+		  passwordVerify += " "
+		}
+	}
+	eventHandler.OnDefault = func(event termbox.Event) {
+		if event.Ch != 0 {
+			if box == 0 && len(username) < 64 {
+				username += string(event.Ch)
+			} else if box == 1 && len(password) < 64 {
+				password += string(event.Ch)
+			} else if box == 2 && len(passwordVerify) < 64 {
+				passwordVerify += string(event.Ch)
+			}
+		}
+	}
+  
+  updateWindow()
+  for !quit && !done {
+		select {
+		case event := <-termboxEvent:
+			ccg.TermboxSwitch(event, eventHandler)
+			updateWindow()
+		}
+	}
 }
 
-// Displays the chat window
+
+// *********************************************
+// **************** Chat Window ****************
+// ********************************************* 
+
 func displayChatWindow(serv *ccg.Host) {
 
 	// Setup the variables
@@ -267,12 +411,6 @@ func displayChatWindow(serv *ccg.Host) {
 	}
 }
 
-// Polls for keyboard events
-func termboxEventPoller(event chan<- termbox.Event) {
-	for {
-		event <- termbox.PollEvent()
-	}
-}
 
 //Updates the chat
 func updateChatWindow(input string, messages *list.List, start_message int) {
@@ -340,3 +478,18 @@ func displayInput(input string) int {
 	}
 	return 1
 }
+
+
+
+// *********************************************
+// ************** Other Functions **************
+// ********************************************* 
+
+func termboxEventPoller(event chan<- termbox.Event) {
+	for {
+		event <- termbox.PollEvent()
+	}
+}
+
+
+
