@@ -39,7 +39,9 @@ func main() {
 	if termErr != nil {
 		panic(termErr)
 	}
-	defer termbox.Close()
+	defer func(){
+		termbox.Close()
+	}()
 
 	quit := false
 	loggedin := false

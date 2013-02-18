@@ -10,10 +10,11 @@ type User struct {
 	Username string
 	perms    byte
 	Outp     chan<- Packet
+	connected bool
 }
 
 func UserWithConn(Conn net.Conn) *User {
-	u := User{Conn, "", 0, nil}
+	u := User{Conn, "", 0, nil,true}
 	return &u
 }
 
@@ -26,6 +27,7 @@ func (u *User) Listen() {
 		if err != nil {
 			log.Printf("%s has disconnected.\n", u.Username)
 			u.Conn.Close()
+			u.connected = false
 			return
 		}
 		u.Outp <- p

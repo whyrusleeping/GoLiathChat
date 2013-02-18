@@ -6,7 +6,7 @@ import (
 )
 
 type File struct {
-	filename string
+	Filename string
 	blocks int32
 	data []*block
 }
@@ -32,7 +32,7 @@ func LoadFile(path string) (*File, error) {
 		numBlocks++
 	}
 	rf := File{}
-	rf.filename = path
+	rf.Filename = path
 	rf.data = make([]*block, numBlocks)
 	blockCount := 0
 	for ;size >= BlockSize;blockCount++ {
@@ -60,7 +60,7 @@ func NewBlock(size int) *block {
 
 //Writes the file to the hard disk
 func (f *File) Save() error {
-	fi, err := os.Create(f.filename)
+	fi, err := os.Create(f.Filename)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (f *File) Save() error {
 //checks to see if the file is complete
 func (f *File) IsComplete() bool {
 	for i := 0; i < len(f.data); i++ {
-		if f.data == nil {
+		if f.data[i] == nil {
 			return false
 		}
 	}
@@ -82,10 +82,10 @@ func (f *File) IsComplete() bool {
 }
 
 //Gets metadata about the file for sending over the network
-//Packs filename and number of blocks into the returned array
+//Packs Filename and number of blocks into the returned array
 func (f *File) getInfo() []byte {
 	buf := new(bytes.Buffer)
-	buf.Write(BytesFromShortString(f.filename))
+	buf.Write(BytesFromShortString(f.Filename))
 	buf.Write(BytesFromInt32(int32(len(f.data))))
 	return buf.Bytes()
 }
@@ -94,7 +94,7 @@ func (f *File) getInfo() []byte {
 func (f *File) getBytesForBlock(num int) []byte {
 	buf := new(bytes.Buffer)
 	//Possibly replace this with a 'file id' integer negotiated with the server
-	buf.Write(BytesFromShortString(f.filename))
+	buf.Write(BytesFromShortString(f.Filename))
 	buf.Write(BytesFromInt32(int32(num)))
 	buf.Write(BytesFromInt32(int32(len(f.data[num].data))))
 	buf.Write(f.data[num].data)

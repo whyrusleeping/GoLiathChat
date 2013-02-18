@@ -185,6 +185,7 @@ func (s *Server) command(p Packet) {
 			fmt.Println(s.regReqs[args[1]])
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
+			s.saveUserList("users.f")
 		}
 	case "dl":
 		//User wishes to download a file
@@ -237,10 +238,14 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		b := p.GetBytes()
-		for _,u := range s.users {
-			_, err := u.Conn.Write(b)
-			if err != nil {
-				log.Printf("Packet failed to send to %s.\n", u.Username)
+		for uname,u := range s.users {
+			if !u.connected {
+				delete(s.users,uname)
+			} else {
+				_, err := u.Conn.Write(b)
+				if err != nil {
+					log.Printf("Packet failed to send to %s.\n", u.Username)
+				}
 			}
 		}
 	}

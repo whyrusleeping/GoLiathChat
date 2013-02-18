@@ -33,6 +33,7 @@ func NewHost() *Host {
 	}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
+	h.files = make(map[string]*File)
 	return &h
 }
 
@@ -127,8 +128,9 @@ func (h *Host) readMessages() {
 				if h.files[fname].IsComplete() {
 					h.files[fname].Save()
 				}
+			default:
+				h.Reader <- p
 			}
-		h.Reader <- p
 	}
 }
 
