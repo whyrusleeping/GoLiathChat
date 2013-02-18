@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"strings"
+	"errors"
+	"time"
 	"fmt"
 	"log"
 	"net"
@@ -187,6 +189,7 @@ func (s *Server) command(p Packet) {
 	case "dl":
 		//User wishes to download a file
 		//So send it to em?
+		go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -237,10 +240,24 @@ func (s *Server) MessageWriter() {
 		for _,u := range s.users {
 			_, err := u.Conn.Write(b)
 			if err != nil {
-				log.Printf("Packet failed to send to %.\n", u.Username)
+				log.Printf("Packet failed to send to %s.\n", u.Username)
 			}
 		}
 	}
+}
+
+func (s *Server) SendFileToUser(file *File, username string) error {
+	uc := s.users[username]
+	if uc == nil {
+		return errors.New("User does not exist.")
+	}
+	uc.Conn.Write(NewPacket(TFileInfo, file.getInfo()).GetBytes())
+	for i := 0; i < len(file.data); i++ {
+		uc.Conn.Write(NewPacket(TFile, file.getBytesForBlock(i)).GetBytes())
+		time.Sleep(time.Millisecond * 2)
+	}
+	//Wait two milliseconds between sendings
+	return nil
 }
 
 //Loads list of user
