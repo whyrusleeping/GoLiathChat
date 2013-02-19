@@ -3,6 +3,7 @@ package ccg
 import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
+	"strings"
 	"bytes"
 	"log"
 	"net"
@@ -78,6 +79,19 @@ func (h *Host) Cleanup() {
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.Writer
+		if p.Payload[0] == '/' {
+			//This is a command!
+			cmd := extractCommand(string(p.Payload))
+			args := strings.Split(string(p.Payload)," ")
+			switch cmd {
+			case "upload":
+				if len(args) > 1 {
+					go h.SendFile(args[1])
+				}
+				continue
+
+			}
+		}
 		_, err := h.conn.Write(p.GetBytes())
 		if err != nil {
 			//log.Printf("Failed to send message.\n")
@@ -94,13 +108,11 @@ func (h *Host) SendFile(path string) error {
 	}
 	h.files[path] = fi
 	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
-	go func() {
-		for i := 0; i < len(fi.data); i++ {
-			h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
-		}
+	for i := 0; i < len(fi.data); i++ {
+		h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
 		//Wait two milliseconds between sendings
 		time.Sleep(time.Millisecond * 2)
-	}()
+	}
 	return nil
 }
 
@@ -112,25 +124,28 @@ func (h *Host) readMessages() {
 		}
 		//No error, continue on!
 		switch p.Typ {
-			case TFileInfo:
-				buf := bytes.NewBuffer(p.Payload)
-				fname, _ := ReadShortString(buf)
-				nblocks := ReadInt32(buf)
-				h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
-			case TFile:
-				buf := bytes.NewBuffer(p.Payload)
-				fname,_ := ReadShortString(buf)
-				bid := ReadInt32(buf)
-				blockSize := ReadInt32(buf)
-				blck := NewBlock(int(blockSize))
-				buf.Read(blck.data)
-				h.files[fname].data[bid] = blck
-				if h.files[fname].IsComplete() {
-					h.files[fname].Save()
-				}
-			default:
+		case TFileInfo:
+			buf := bytes.NewBuffer(p.Payload)
+			fname, _ := ReadShortString(buf)
+			nblocks := ReadInt32(buf)
+			h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+		case TFile:
+			buf := bytes.NewBuffer(p.Payload)
+			fname,_ := ReadShortString(buf)
+			bid := ReadInt32(buf)
+			blockSize := ReadInt32(buf)
+			blck := NewBlock(int(blockSize))
+			buf.Read(blck.data)
+			h.files[fname].data[bid] = blck
+			if h.files[fname].IsComplete() {
+				h.files[fname].Save()
+				p = NewPacket(1,[]byte(fmt.Sprintf("%s download complete!",fname)))
+				p.Username = "Notice"
 				h.Reader <- p
 			}
+		default:
+			h.Reader <- p
+		}
 	}
 }
 
