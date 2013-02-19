@@ -7,16 +7,16 @@ import (
 )
 
 type TermboxEventHandler struct {
-  KeyEvents map[termbox.Key]func(termbox.Event)
-  OnResize func(termbox.Event)
-  OnError func(termbox.Event)
-  OnDefault func(termbox.Event)
+	KeyEvents map[termbox.Key]func(termbox.Event)
+	OnResize  func(termbox.Event)
+	OnError   func(termbox.Event)
+	OnDefault func(termbox.Event)
 }
 
 func NewTermboxEventHandler() *TermboxEventHandler {
-  teh := TermboxEventHandler{}
-  teh.KeyEvents = make(map[termbox.Key]func(termbox.Event))
-  return &teh
+	teh := TermboxEventHandler{}
+	teh.KeyEvents = make(map[termbox.Key]func(termbox.Event))
+	return &teh
 }
 
 func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
@@ -25,7 +25,7 @@ func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
 		if functions.KeyEvents[event.Key] != nil {
 			functions.KeyEvents[event.Key](event)
 		} else {
-		  functions.OnDefault(event)
+			functions.OnDefault(event)
 		}
 	case termbox.EventResize:
 		if functions.OnResize != nil {
@@ -35,6 +35,18 @@ func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
 		if functions.OnError != nil {
 			functions.OnError(event)
 		}
+	}
+}
+
+//
+//    [ text ]
+//
+func DrawButton(text string, selected bool, x int, y int) {
+	button := "[ " + text + " ]"
+	if selected {
+		WriteColor(x, y, button, termbox.ColorGreen, termbox.ColorBlack)
+	} else {
+		WriteColor(x, y, button, termbox.ColorBlack, termbox.ColorGreen)
 	}
 }
 
@@ -114,7 +126,12 @@ func write_us(x int, y int, mess string) {
 	}
 }
 
-// Displays text on the screen starting at x,y and cuts the end off
+// Write(x int, y int, mess string)
+// Writes a string to the buffer with the 
+// default attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
 func Write(x int, y int, mess string) {
 	sx, _ := termbox.Size()
 	if x+len(mess) > sx {
@@ -122,6 +139,25 @@ func Write(x int, y int, mess string) {
 	}
 	for _, c := range mess {
 		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
+		x++
+	}
+}
+
+// Write(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute)
+// Writes a string to the buffer with the 
+// specified attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
+// fb     The foreground color
+// bg     The background color
+func WriteColor(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute) {
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
+		mess = mess[:sx]
+	}
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, fb, bg)
 		x++
 	}
 }

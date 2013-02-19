@@ -6,15 +6,15 @@ import (
 )
 
 type User struct {
-	Conn     net.Conn
-	Username string
-	perms    byte
-	Outp     chan<- Packet
+	Conn      net.Conn
+	Username  string
+	perms     byte
+	Outp      chan<- Packet
 	connected bool
 }
 
 func UserWithConn(Conn net.Conn) *User {
-	u := User{Conn, "", 0, nil,true}
+	u := User{Conn, "", 0, nil, true}
 	return &u
 }
 
@@ -33,4 +33,3 @@ func (u *User) Listen() {
 		u.Outp <- p
 	}
 }
-

@@ -1,12 +1,12 @@
 package ccg
 
 import (
+	"bytes"
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/tls"
-	"bytes"
+	"fmt"
 	"log"
 	"net"
-	"fmt"
 	"time"
 )
 
@@ -22,7 +22,7 @@ type Host struct {
 	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
-	files			map[string]*File
+	files          map[string]*File
 }
 
 func NewHost() *Host {
@@ -112,25 +112,25 @@ func (h *Host) readMessages() {
 		}
 		//No error, continue on!
 		switch p.Typ {
-			case TFileInfo:
-				buf := bytes.NewBuffer(p.Payload)
-				fname, _ := ReadShortString(buf)
-				nblocks := ReadInt32(buf)
-				h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
-			case TFile:
-				buf := bytes.NewBuffer(p.Payload)
-				fname,_ := ReadShortString(buf)
-				bid := ReadInt32(buf)
-				blockSize := ReadInt32(buf)
-				blck := NewBlock(int(blockSize))
-				buf.Read(blck.data)
-				h.files[fname].data[bid] = blck
-				if h.files[fname].IsComplete() {
-					h.files[fname].Save()
-				}
-			default:
-				h.Reader <- p
+		case TFileInfo:
+			buf := bytes.NewBuffer(p.Payload)
+			fname, _ := ReadShortString(buf)
+			nblocks := ReadInt32(buf)
+			h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+		case TFile:
+			buf := bytes.NewBuffer(p.Payload)
+			fname, _ := ReadShortString(buf)
+			bid := ReadInt32(buf)
+			blockSize := ReadInt32(buf)
+			blck := NewBlock(int(blockSize))
+			buf.Read(blck.data)
+			h.files[fname].data[bid] = blck
+			if h.files[fname].IsComplete() {
+				h.files[fname].Save()
 			}
+		default:
+			h.Reader <- p
+		}
 	}
 }
 

@@ -1,19 +1,19 @@
 package ccg
 
 import (
-	"os"
 	"bytes"
+	"os"
 )
 
 type File struct {
 	Filename string
-	blocks int32
-	data []*block
+	blocks   int32
+	data     []*block
 }
 
 type block struct {
 	blockNum uint32
-	data []byte
+	data     []byte
 }
 
 //const BlockSize = 32768
@@ -21,21 +21,21 @@ const BlockSize = 8
 
 //Loads the given file from the hard drive and breaks into blocks
 func LoadFile(path string) (*File, error) {
-	f,err := os.Open(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	finfo,_ := os.Stat(path)
+	finfo, _ := os.Stat(path)
 	size := finfo.Size()
 	numBlocks := size / BlockSize
-	if size % BlockSize != 0 {
+	if size%BlockSize != 0 {
 		numBlocks++
 	}
 	rf := File{}
 	rf.Filename = path
 	rf.data = make([]*block, numBlocks)
 	blockCount := 0
-	for ;size >= BlockSize;blockCount++ {
+	for ; size >= BlockSize; blockCount++ {
 		b := NewBlock(BlockSize)
 		size -= BlockSize
 		f.Read(b.data)
@@ -100,7 +100,6 @@ func (f *File) getBytesForBlock(num int) []byte {
 	buf.Write(f.data[num].data)
 	return buf.Bytes()
 }
-
 
 //Some thoughts:
 //
