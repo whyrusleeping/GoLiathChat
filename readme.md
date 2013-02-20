@@ -18,13 +18,26 @@ Features:
 
 ##Client
 **Login**
+
 The first screen that comes up will be the login screen, enter your username and password to authenticate with the server.
 If you do not have a username and password on the server, press ctrl+r to bring up the registration screen.
 
 **Registration**
+
 From the registration screen, enter your desired username and password and submit it. Your request gets sent to the server where it is reviewed by moderators and accepted or denied. If it is accepted you may then log into the server with your username and password.
 
 **History**
-<br>We allows users to request history through using the `history` command
+
+We allows users to request history through using the `history` command
 
       /history [number of messages]
+
+**File Transfers**
+
+To upload a file to the server for sharing, use:
+
+	/upload path/to/filename
+
+Once a file is on the server, other users may download it with:
+
+	/dl filename
