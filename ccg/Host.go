@@ -23,7 +23,9 @@ type Host struct {
 	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
-	files			map[string]*File
+	filesLocal			map[string]*File
+	filesAvailable []string
+	usersOnline	   []string
 }
 
 func NewHost() *Host {
@@ -34,7 +36,9 @@ func NewHost() *Host {
 	}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
-	h.files = make(map[string]*File)
+	h.filesLocal = make(map[string]*File)
+	h.usersOnline = make([]string, 0, 256)
+	h.filesAvailable = make([]string, 0 ,256)
 	return &h
 }
 
@@ -89,7 +93,23 @@ func (h *Host) writeMessages() {
 					go h.SendFile(args[1])
 				}
 				continue
-
+			case "files":
+				txt := ""
+				if len(h.filesAvailable) > 0 {
+					txt = "Files available:"
+					for i := 0; i < len(h.filesAvailable); i++ {
+						txt += fmt.Sprintf("\n%s", h.filesAvailable[i])
+					}
+				} else {
+					txt = "No files available!"
+				}
+				rp := NewPacket(TMessage, []byte(txt))
+				rp.Username = "Notice"
+				h.Reader <- rp
+			default:
+				go func() {
+					h.Reader <- NewPacket(TMessage, []byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
+				}()
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
@@ -106,7 +126,7 @@ func (h *Host) SendFile(path string) error {
 	if err != nil {
 		return err
 	}
-	h.files[path] = fi
+	h.filesLocal[path] = fi
 	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
 	for i := 0; i < len(fi.data); i++ {
 		h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
@@ -128,7 +148,8 @@ func (h *Host) readMessages() {
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
 			nblocks := ReadInt32(buf)
-			h.files[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			flags := buf.ReadByte()
+			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
 			fname,_ := ReadShortString(buf)
@@ -136,12 +157,25 @@ func (h *Host) readMessages() {
 			blockSize := ReadInt32(buf)
 			blck := NewBlock(int(blockSize))
 			buf.Read(blck.data)
-			h.files[fname].data[bid] = blck
-			if h.files[fname].IsComplete() {
-				h.files[fname].Save()
+			h.filesLocal[fname].data[bid] = blck
+			if h.filesLocal[fname].IsComplete() {
+				h.filesLocal[fname].Save()
 				p = NewPacket(1,[]byte(fmt.Sprintf("%s download complete!",fname)))
 				p.Username = "Notice"
 				h.Reader <- p
+			}
+		case TServerInfo:
+			//Parse this into a struct. maybe?
+			buf := bytes.NewBuffer(p.Payload)
+			nUsers := int(ReadInt32(buf))
+			h.usersOnline = h.usersOnline[:nUsers]
+			for i := 0; i < nUsers; i++ {
+				h.usersOnline[i],_ = ReadShortString(buf)
+			}
+			nFiles := int(ReadInt32(buf))
+			h.filesAvailable = h.filesAvailable[:nFiles]
+			for i := 0; i < nFiles; i++ {
+				h.filesAvailable[i],_ = ReadShortString(buf)
 			}
 		default:
 			h.Reader <- p

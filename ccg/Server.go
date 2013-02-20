@@ -217,6 +217,7 @@ func (s *Server) MessageHandler() {
 			fname,_ := ReadShortString(buf)
 			fmt.Printf("User %s wants to upload %s.\n",p.Username,fname)
 			nblocks := ReadInt32(buf)
+			flags := buf.ReadByte()
 			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
@@ -225,11 +226,31 @@ func (s *Server) MessageHandler() {
 			nbytes := ReadInt32(buf)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
-			fmt.Printf("Received data: %s\n", string(blck.data))
+			//fmt.Printf("Received data: %s\n", string(blck.data))
 			s.uplFiles[fname].data[packID] = blck
+			if s.uplFiles[fname].IsComplete() {
+				np := NewPacket(1,[]byte(fmt.Sprintf("New File Available: %s\n",fname)))
+				np.Username = "Server"
+				s.parse <- np
+			}
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}
+}
+
+//Send server info.
+//This includes names of online users and the list of files available for download
+func (s *Server) SendServerInfo() {
+	buf := new(bytes.Buffer)
+	buf.Write(BytesFromInt32(int32(len(s.users))))
+	for k,_ := range s.users {
+		buf.Write(BytesFromShortString(k))
+	}
+	buf.Write(BytesFromInt32(int32(len(s.uplFiles))))
+	for k,_ := range s.uplFiles {
+		buf.Write(BytesFromShortString(k))
+	}
+	s.parse <- NewPacket(TServerInfo, buf.Bytes())
 }
 
 //Receives and parses packets and then sends them to each connection in the list
