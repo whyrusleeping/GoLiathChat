@@ -5,6 +5,58 @@ import (
 	"github.com/nsf/termbox-go"
 	"strings"
 )
+type Cursor struct {
+  x int
+  y int
+}
+
+type Control struct {
+  x int               // Starting X Position
+  y int               // Starting Y Position
+  width int           // Width of the Control
+  height int          // Height of the Control
+  max_height int      // The max height (defaults to height)
+  max_width int       // The max width (defaults to width)
+  id int              // The ID number of the Control
+  
+  text string         // The text of the control
+  textlines string    // The lines of text in the control
+  
+  OnDraw  func()
+  
+}
+
+type Button struct {
+  control Control
+  selected bool
+  
+  OnDraw  func()
+  OnActivated func()
+}
+
+type TextBox struct {
+  control Control
+  selected bool
+  cursor Cursor
+  
+  OnDraw  func()
+}
+
+type Panel struct {
+  
+	//controls Control[]
+	
+	OnDraw func()
+}
+
+type ScrollPanel struct {
+  panel Panel
+  max_index int
+  min_index int
+  cur_index int
+  
+  OnDraw func()
+}
 
 type TermboxEventHandler struct {
 	KeyEvents map[termbox.Key]func(termbox.Event)
