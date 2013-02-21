@@ -9,6 +9,9 @@ type Cursor struct {
   x int
   y int
 }
+func (c Cursor) OnDraw() { 
+  termbox.SetCursor(c.x,c.y)
+}
 
 type Control struct {
   x int               // Starting X Position
@@ -20,19 +23,42 @@ type Control struct {
   id int              // The ID number of the Control
   
   text string         // The text of the control
-  textlines string    // The lines of text in the control
-  
-  OnDraw  func()
-  
+  textlines []string    // The lines of text in the control
 }
+func (c Control) OnDraw() { 
+  if len(c.text) < c.max_width {
+    Write(c.x,c.y,c.text)
+  } else {
+    c.textlines = GetLines(c.text, c.max_width)
+    for i, line := range c.textlines {
+      Write(c.x, c.y+i,line)
+	  }
+  }
+}
+
 
 type Button struct {
   control Control
   selected bool
   
-  OnDraw  func()
   OnActivated func()
 }
+func (b Button) OnDraw() { 
+  if b.selected {
+    if len(b.control.text) < b.control.max_width {
+      Write(b.control.x,b.control.y,b.control.text)
+    } else {
+      b.control.textlines = GetLines(b.control.text, b.control.max_width)
+      for i, line := range b.control.textlines {
+        Write(b.control.x, b.control.y+i,line)
+	    }
+    }
+    
+  } else {
+    
+  }
+}
+
 
 type TextBox struct {
   control Control
