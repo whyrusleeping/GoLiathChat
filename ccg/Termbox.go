@@ -5,11 +5,17 @@ import (
 	"github.com/nsf/termbox-go"
 	"strings"
 )
+
+type Drawable interface {
+	Draw()
+}
+
 type Cursor struct {
   x int
   y int
 }
-func (c Cursor) OnDraw() { 
+
+func (c Cursor) Draw() { 
   termbox.SetCursor(c.x,c.y)
 }
 
@@ -25,7 +31,7 @@ type Control struct {
   textlines []string    // The lines of text in the control
 }
 // Draw the control
-func (c Control) OnDraw() { 
+func (c Control) Draw() { 
   if len(c.text) < c.max_width {
     Write(c.x,c.y,c.text)
   } else {
@@ -66,7 +72,7 @@ type Button struct {
   OnActivated func()
 }
 // Draw the button
-func (b Button) OnDraw() { 
+func (b Button) Draw() { 
   if b.selected {
     if len(b.control.text) < b.control.max_width {
       WriteColor(b.control.x,b.control.y,b.control.text, termbox.ColorBlack, termbox.ColorGreen)
@@ -103,10 +109,10 @@ type TextBox struct {
   
 }
 // Draw the textbox
-func (t TextBox) OnDraw() {
-  t.control.OnDraw()
+func (t TextBox) Draw() {
+  t.control.Draw()
   if(t.selected) {
-    t.cursor.OnDraw()
+    t.cursor.Draw()
   }
 }
 
@@ -115,7 +121,7 @@ type Panel struct {
   
 	//controls Control[]
 	
-	OnDraw func()
+	Draw func()
 }
 
 type ScrollPanel struct {
@@ -124,7 +130,7 @@ type ScrollPanel struct {
   min_index int
   cur_index int
   
-  OnDraw func()
+  Draw func()
 }
 
 type TermboxEventHandler struct {
