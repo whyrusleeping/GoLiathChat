@@ -1,4 +1,4 @@
-package ccg
+package tboxgui
 
 import (
 	"container/list"
@@ -15,7 +15,7 @@ type Cursor struct {
   y int
 }
 
-func (c Cursor) Draw() { 
+func (c Cursor) Draw() {
   termbox.SetCursor(c.x,c.y)
 }
 
@@ -31,7 +31,7 @@ type Control struct {
   textlines []string    // The lines of text in the control
 }
 // Draw the control
-func (c Control) Draw() { 
+func (c Control) Draw() {
   if len(c.text) < c.max_width {
     Write(c.x,c.y,c.text)
   } else {
@@ -68,7 +68,7 @@ func NewControl(text string, x int, y int, max_height int, max_width int, id int
 type Button struct {
   control *Control
   selected bool
-  
+
   OnActivated func()
 }
 // Draw the button
