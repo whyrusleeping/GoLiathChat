@@ -8,3 +8,6 @@ client:
 
 server:
 	go build -o bin/server ccgServer.go
+	
+qt: 
+	go build -ldflags '-r /lib' bin/qtclient qtgui/qtClient.go

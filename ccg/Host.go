@@ -148,7 +148,7 @@ func (h *Host) readMessages() {
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
 			nblocks := ReadInt32(buf)
-			flags := buf.ReadByte()
+			buf.ReadByte()
 			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)

@@ -216,7 +216,7 @@ func (s *Server) MessageHandler() {
 			fname, _ := ReadShortString(buf)
 			fmt.Printf("User %s wants to upload %s.\n", p.Username, fname)
 			nblocks := ReadInt32(buf)
-			flags := buf.ReadByte()
+			buf.ReadByte()
 			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
