@@ -88,6 +88,8 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 
 	// Update the login window
 	updateWindow := func() {
+	
+	
 		tboxgui.Clear()
 		sx, sy := termbox.Size()
 

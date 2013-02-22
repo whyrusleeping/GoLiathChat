@@ -5,16 +5,23 @@ import (
 	"github.com/nsf/termbox-go"
 	"strings"
 )
+const (
+       horizontal = iota
+       vertical
+      )
 
+// Any object that is drawable
 type Drawable interface {
 	Draw()
 }
 
+// A cursor
 type Cursor struct {
   x int
   y int
 }
 
+// Draw function for the cursor
 func (c Cursor) Draw() {
   termbox.SetCursor(c.x,c.y)
 }
@@ -30,6 +37,7 @@ type Control struct {
   text string         // The text of the control
   textlines []string    // The lines of text in the control
 }
+
 // Draw the control
 func (c Control) Draw() {
   if len(c.text) < c.max_width {
@@ -41,6 +49,7 @@ func (c Control) Draw() {
 	  }
   }
 }
+
 // Make a new control with these parameters
 func NewControl(text string, x int, y int, max_height int, max_width int, id int) *Control {
     c := Control{}
@@ -71,6 +80,7 @@ type Button struct {
 
   OnActivated func()
 }
+
 // Draw the button
 func (b Button) Draw() { 
   if b.selected {
@@ -93,6 +103,7 @@ func (b Button) Draw() {
     }
   }
 }
+
 // Make a new buton
 func NewButton (text string, x int, y int, max_height int, max_width int, id int) *Button {
   b := Button{}
@@ -108,6 +119,7 @@ type TextBox struct {
   cursor Cursor
   
 }
+
 // Draw the textbox
 func (t TextBox) Draw() {
   t.control.Draw()
@@ -116,13 +128,42 @@ func (t TextBox) Draw() {
   }
 }
 
+// Make a new buton
+func NewTextBox (text string, x int, y int, max_height int, max_width int, id int) *TextBox {
+  t := TextBox{}
+  t.control = NewControl(text,x,y,max_height,max_width,id)
+  t.cursor = Cursor{x+t.control.width,y+t.control.height}
+  t.selected = false
+  return &t
+} 
 
+
+// A panel
 type Panel struct {
-  
-	//controls Control[]
-	
-	Draw func()
+  control *Control
+  border bool
+  borderH rune
+  borderV rune
+  borderC rune
+  layout int // 1 Horizontal 2 Vertical
+  objects []Drawable
 }
+
+// Draw the Panel
+func (p Panel) Draw() {
+  for _, object := range p.objects {
+      object.Draw()
+	}
+}
+
+func (p Panel) Resize() {
+  if p.layout == horizontal {
+  
+  } else if p.layout == vertical {
+  
+  }
+}
+
 
 type ScrollPanel struct {
   panel *Panel
@@ -130,7 +171,21 @@ type ScrollPanel struct {
   min_index int
   cur_index int
   
-  Draw func()
+}
+
+// Draw the ScrollPanel
+func (s ScrollPanel) Draw() {
+  
+}
+
+type Window struct {
+  name string
+  drawables []Drawable
+}
+func (w Window) Draw() {
+  for _, object := range w.drawables {
+      object.Draw()
+	}
 }
 
 type TermboxEventHandler struct {
