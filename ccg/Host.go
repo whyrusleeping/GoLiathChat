@@ -113,7 +113,6 @@ func (h *Host) writeMessages() {
 				}()
 			}
 		}
-		fmt.Printf("Payload size: %d\n",len(p.Payload))
 		_, err := h.conn.Write(p.GetBytes())
 		if err != nil {
 			//log.Printf("Failed to send message.\n")
@@ -191,7 +190,6 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
-	fmt.Println(phash)
 	h.conn.Write(phash)
 }
 
@@ -202,7 +200,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.
-	ulen := BytesFromInt32(int32(len(handle)))
+	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)
 	h.conn.Write([]byte(handle))
 

@@ -223,11 +223,12 @@ func (s *Server) MessageHandler() {
 			fname,_ := ReadShortString(buf)
 			packID := ReadInt32(buf)
 			nbytes := ReadInt32(buf)
+			fmt.Printf("Nbytes: %d\n",nbytes)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
 			s.uplFiles[fname].data[packID] = blck
 			if s.uplFiles[fname].IsComplete() {
-				np := NewPacket(1,[]byte(fmt.Sprintf("New File Available: %s\n",fname)))
+				np := NewPacket(1,[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
 				np.Username = "Server"
 				s.parse <- np
 			}
@@ -240,11 +241,11 @@ func (s *Server) MessageHandler() {
 //This includes names of online users and the list of files available for download
 func (s *Server) SendServerInfo() {
 	buf := new(bytes.Buffer)
-	buf.Write(BytesFromInt32(int32(len(s.users))))
+	buf.Write(WriteInt32(int32(len(s.users))))
 	for k,_ := range s.users {
 		buf.Write(BytesFromShortString(k))
 	}
-	buf.Write(BytesFromInt32(int32(len(s.uplFiles))))
+	buf.Write(WriteInt32(int32(len(s.uplFiles))))
 	for k,_ := range s.uplFiles {
 		buf.Write(BytesFromShortString(k))
 	}
@@ -277,7 +278,8 @@ func (s *Server) SendFileToUser(file *File, username string) error {
 	}
 	uc.Conn.Write(NewPacket(TFileInfo, file.getInfo()).GetBytes())
 	for i := 0; i < len(file.data); i++ {
-		uc.Conn.Write(NewPacket(TFile, file.getBytesForBlock(i)).GetBytes())
+		p := NewPacket(TFile, file.getBytesForBlock(i))
+		uc.Conn.Write(p.GetBytes())
 		time.Sleep(time.Millisecond * 2)
 	}
 	//Wait two milliseconds between sendings

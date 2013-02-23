@@ -70,6 +70,10 @@ func LoadFile(path string) (*File, error) {
 	}
 	rf := File{finfo.Name(), 0, make([]*block, numBlocks), cbyte}
 
+	if compr {
+		rf.Filename += ".gz"
+	}
+
 	//Read the file into blocks
 	blockCount := 0
 	for ;size >= BlockSize;blockCount++ {
@@ -124,7 +128,7 @@ func (f *File) IsComplete() bool {
 func (f *File) getInfo() []byte {
 	buf := new(bytes.Buffer)
 	buf.Write(BytesFromShortString(f.Filename))
-	buf.Write(BytesFromInt32(int32(len(f.data))))
+	buf.Write(WriteInt32(int32(len(f.data))))
 	buf.WriteByte(f.compr)
 	return buf.Bytes()
 }
@@ -134,8 +138,8 @@ func (f *File) getBytesForBlock(num int) []byte {
 	buf := new(bytes.Buffer)
 	//Possibly replace this with a 'file id' integer negotiated with the server
 	buf.Write(BytesFromShortString(f.Filename))
-	buf.Write(BytesFromInt32(int32(num)))
-	buf.Write(BytesFromInt32(int32(len(f.data[num].data))))
+	buf.Write(WriteInt32(int32(num)))
+	buf.Write(WriteInt32(int32(len(f.data[num].data))))
 	buf.Write(f.data[num].data)
 	return buf.Bytes()
 }

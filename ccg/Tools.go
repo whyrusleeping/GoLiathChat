@@ -18,22 +18,23 @@ func ReadInt32(c io.Reader) int32 {
 	c.Read(tmp)
 	r = int32(tmp[0])
 	c.Read(tmp)
-	r += int32(tmp[0]<< 8)
+	r += int32(tmp[0]) << 8
 	c.Read(tmp)
-	r += int32(tmp[0]<< 16)
+	r += int32(tmp[0]) << 16
 	c.Read(tmp)
-	r += int32(tmp[0]<< 24)
+	r += int32(tmp[0]) << 24
 	return r
 }
 
+/*
 func BytesFromInt32(i int32) []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, i)
 	return buf.Bytes()
 }
+*/
 
-/*
-func ReadInt32(a []byte) int32 {
+func BytesToInt32(a []byte) int32 {
 	n := 0
 	n += int(a[0])
 	n += int(a[1]) << 8
@@ -41,9 +42,9 @@ func ReadInt32(a []byte) int32 {
 	n += int(a[3]) << 24
 	return int32(n)
 }
-*/
 
-func WriteInt32(n uint32) []byte {
+
+func WriteInt32(n int32) []byte {
 	arr := make([]byte, 4)
 	arr[0] = byte(n)
 	arr[1] = byte(n >> 8)
@@ -91,7 +92,7 @@ func GeneratePepper() []byte {
 }
 
 func HashPassword(password string) []byte {
-	pHash, err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 19, 7, 32)
+	pHash, err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 9, 7, 32)
 	if err != nil {
 		panic(err)
 	}
