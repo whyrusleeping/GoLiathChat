@@ -110,33 +110,56 @@ func NewButton (text string, x int, y int, max_height int, max_width int, id int
   b.control = NewControl(text,x,y,max_height,max_width,id)
   b.selected = false
   return &b
-} 
+}
 
-// TextBox Object
+//Provides an area for scrolling text
+type ScrollingTextArea struct {
+	control *Control
+	text []string
+	offset int
+	wrap bool
+}
+
+func (scr *ScrollingTextArea) Draw() {
+	//Tenative draw function
+	for i := 0; i < scr.control.height; i++ {
+		Write(scr.control.x, scr.control.y + i, scr.text[offset + i])
+	}
+}
+
+func (scr *ScrollingTextArea) AddLine(text string) {
+	
+}
+
+// A Text box for entering text into
 type TextBox struct {
   control *Control
   selected bool
   cursor Cursor
-  
+	text string
 }
 
 // Draw the textbox
 func (t TextBox) Draw() {
-  t.control.Draw()
+	Write(t.control.x, t.control.y, t.text)
   if(t.selected) {
     t.cursor.Draw()
   }
 }
 
-// Make a new buton
-func NewTextBox (text string, x int, y int, max_height int, max_width int, id int) *TextBox {
-  t := TextBox{}
-  t.control = NewControl(text,x,y,max_height,max_width,id)
-  t.cursor = Cursor{x+t.control.width,y+t.control.height}
-  t.selected = false
+// Creates a new textbox
+func NewTextBox (x, y, max_height, max_width, id int) *TextBox {
+  t := TextBox{
+	  NewControl("",x,y,max_height,max_width,id),
+	  false,
+		Cursor{x,y},
+		""}
   return &t
-} 
+}
 
+func (t *TextBox) SetText(ntext string) {
+	t.text = ntext
+}
 
 // A panel
 type Panel struct {
@@ -170,7 +193,7 @@ type ScrollPanel struct {
   max_index int
   min_index int
   cur_index int
-  
+	 
 }
 
 // Draw the ScrollPanel
@@ -358,4 +381,12 @@ func Clear() {
 //Flushes to the screen
 func Flush() {
 	termbox.Flush()
+}
+
+func Init() {
+	termbox.Init()
+}
+
+func Cleanup() {
+	termbox.Close()
 }
