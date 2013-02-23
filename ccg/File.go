@@ -3,6 +3,9 @@ package ccg
 import (
 	"os"
 	"bytes"
+	"io"
+	"io/ioutil"
+	"compress/gzip"
 )
 
 //A struct to represent a File broken into blocks for transfer
@@ -10,6 +13,7 @@ type File struct {
 	Filename string
 	blocks int32
 	data []*block
+	compr byte
 }
 
 //A block of file data tagged with its index
@@ -18,13 +22,15 @@ type block struct {
 	data []byte
 }
 
+//Having blocksize at 32768 causes a strange error i have yet to track down
 //const BlockSize = 32768
-const BlockSize = 8
+const BlockSize = 4096
 
 //Loads the given file from the hard drive and breaks into blocks
 func LoadFile(path string) (*File, error) {
 	//Open File
 	f,err := os.Open(path)
+	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -32,26 +38,50 @@ func LoadFile(path string) (*File, error) {
 	//Get file info and calculate block count
 	finfo,_ := os.Stat(path)
 	size := finfo.Size()
+	compr := false
+	if size > BlockSize {
+		compr = true
+	}
+	var reader io.Reader
+	if compr {
+		//read in file and compress it
+		arr,_ := ioutil.ReadAll(f)
+		buff := new(bytes.Buffer)
+		wr := gzip.NewWriter(buff)
+		wr.Write(arr)
+		wr.Close()
+		reader = buff
+		size = int64(buff.Len())
+	} else {
+		reader = f
+	}
+
+
+	//Calculate the number of blocks needed
 	numBlocks := size / BlockSize
 	if size % BlockSize != 0 {
 		numBlocks++
 	}
 
 	//Create the file object
-	rf := File{finfo.Name(), 0, make([]*block, numBlocks)}
+	cbyte := byte(0)
+	if compr {
+		cbyte = 1
+	}
+	rf := File{finfo.Name(), 0, make([]*block, numBlocks), cbyte}
 
 	//Read the file into blocks
 	blockCount := 0
 	for ;size >= BlockSize;blockCount++ {
 		b := NewBlock(BlockSize)
 		size -= BlockSize
-		f.Read(b.data)
+		reader.Read(b.data)
 		b.blockNum = uint32(blockCount)
 		rf.data[blockCount] = b
 	}
 	if size > 0 {
 		b := NewBlock(int(size))
-		f.Read(b.data)
+		reader.Read(b.data)
 		b.blockNum = uint32(blockCount)
 		rf.data[blockCount] = b
 	}
@@ -95,7 +125,7 @@ func (f *File) getInfo() []byte {
 	buf := new(bytes.Buffer)
 	buf.Write(BytesFromShortString(f.Filename))
 	buf.Write(BytesFromInt32(int32(len(f.data))))
-	buf.WriteByte(0)
+	buf.WriteByte(f.compr)
 	return buf.Bytes()
 }
 

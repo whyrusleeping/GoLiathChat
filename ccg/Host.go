@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"strings"
 	"bytes"
-	"log"
 	"net"
 	"fmt"
 	"time"
@@ -32,7 +31,6 @@ func NewHost() *Host {
 	h := Host{}
 	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
 	}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
@@ -49,7 +47,6 @@ func (h *Host) Connect(hostname string) error {
 		return err
 	}
 	h.conn = conn
-	log.Println("client: connected to: ", h.conn.RemoteAddr())
 
 	h.Reader = make(chan Packet)
 	h.Writer = make(chan Packet)
@@ -106,12 +103,17 @@ func (h *Host) writeMessages() {
 				rp := NewPacket(TMessage, []byte(txt))
 				rp.Username = "Notice"
 				h.Reader <- rp
+			case "accept":
+				break
+			case "dl":
+				break
 			default:
 				go func() {
 					h.Reader <- NewPacket(TMessage, []byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
 				}()
 			}
 		}
+		fmt.Printf("Payload size: %d\n",len(p.Payload))
 		_, err := h.conn.Write(p.GetBytes())
 		if err != nil {
 			//log.Printf("Failed to send message.\n")
@@ -148,8 +150,8 @@ func (h *Host) readMessages() {
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
 			nblocks := ReadInt32(buf)
-			flags := buf.ReadByte()
-			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			flags,_ := buf.ReadByte()
+			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
 			fname,_ := ReadShortString(buf)

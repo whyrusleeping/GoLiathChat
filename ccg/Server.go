@@ -174,7 +174,6 @@ func (s *Server) Listen() {
 func (s *Server) command(p Packet) {
 	cmd := extractCommand(string(p.Payload))
 	args := strings.Split(string(p.Payload)," ")
-	fmt.Println(cmd)
 	switch cmd {
 	case "accept":
 		if len(args) < 2 {
@@ -217,8 +216,8 @@ func (s *Server) MessageHandler() {
 			fname,_ := ReadShortString(buf)
 			fmt.Printf("User %s wants to upload %s.\n",p.Username,fname)
 			nblocks := ReadInt32(buf)
-			flags := buf.ReadByte()
-			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			flags,_ := buf.ReadByte()
+			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
 			fname,_ := ReadShortString(buf)
@@ -226,7 +225,6 @@ func (s *Server) MessageHandler() {
 			nbytes := ReadInt32(buf)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
-			//fmt.Printf("Received data: %s\n", string(blck.data))
 			s.uplFiles[fname].data[packID] = blck
 			if s.uplFiles[fname].IsComplete() {
 				np := NewPacket(1,[]byte(fmt.Sprintf("New File Available: %s\n",fname)))
