@@ -29,6 +29,11 @@ func main() {
 	stb.AddLine("text")
 	stb.AddLine("whats???")
 	stb.AddLine("i dont know")
+	stb.AddLine("ERIC BALL")
+	stb.AddLine("words and stuff")
+	stb.AddLine("fish tacos")
+	stb.AddLine("that thing")
+
 	tboxgui.Flush()
 
 	// Start the goroutines
