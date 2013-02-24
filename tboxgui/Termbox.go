@@ -102,8 +102,9 @@ func NewScrollingTextArea(x, y, height, width, maxlines int) *ScrollingTextArea 
 }
 
 func (scr *ScrollingTextArea) Draw() {
+	Write(0,0,"test")
 	//Tenative draw function
-	for i := 0; i < scr.control.height; i++ {
+	for i := 0; i < scr.control.height && i < scr.numStr; i++ {
 		Write(scr.control.x, scr.control.y+i, scr.text[scr.offset+i])
 	}
 }
@@ -130,7 +131,6 @@ type TextBox struct {
 
 // Draw the textbox
 func (t TextBox) Draw() {
-
 	if len(t.text) < t.control.max_width {
 		if t.Masked {
 			WriteMasked(t.control.x, t.control.y, len(t.text))
