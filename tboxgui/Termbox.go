@@ -6,9 +6,18 @@ import (
 	"strings"
 )
 
+// Layout orentations
 const (
 	Horizontal = iota
 	Vertical
+	Grid
+)
+
+// Constants for Snapping
+const (
+	Left = iota
+	Right
+	Center
 )
 
 // Any object that is drawable
@@ -60,7 +69,7 @@ func (dl *DrawableList) ItemAt(i int) Drawable {
 		return dl.l[i]
 	}
 
-	//Pointless return statement that go requires for some reason...
+	//Pointless return statement that go requires for some reason... Quit whining 
 	return nil
 }
 
@@ -82,6 +91,7 @@ type Control struct {
 	height     int // Height of the Control
 	max_height int // The max height (defaults to height)
 	max_width  int // The max width (defaults to width)
+	snap       int // How the control will snap (LEFT RIGHT CENTER)
 }
 
 // Draw the control
@@ -255,18 +265,25 @@ type Panel struct {
 	control  *Control
 	HPercent int
 	VPercent int
-	Layout   int        // 1 Horizontal 2 Vertical
-	objects  *list.List // Drawable
+	Layout   int // 1 Horizontal 2 Vertical
+	objects  *DrawableList
+}
 
-	OnKeyEvent func(termbox.Event)
+func NewPanel(x, y, HPercent, VPercent, Layout int) *Panel {
+	c := NewControl(x, y, 0, 0)
+	p := Panel{c,
+		HPercent,
+		VPercent,
+		Layout,
+		NewDrawableList()}
+	return &p
 }
 
 // Draw the Panel
 func (p Panel) Draw() {
-	var d Drawable
-	for object := p.objects.Front(); object != nil; object = object.Next() {
-		d = object.Value.(Drawable)
-		d.Draw()
+
+	for i := 0; i < p.objects.count; i++ {
+		p.objects.ItemAt(i).Draw()
 	}
 }
 
@@ -279,11 +296,11 @@ func (p Panel) Resize() {
 }
 
 func (p Panel) AddObject(d Drawable) {
-	p.objects.PushBack(d)
+	p.objects.Add(d)
 }
 
 func (p Panel) RemoveObject(d Drawable) {
-
+	p.objects.Remove(d)
 }
 
 type ScrollPanel struct {

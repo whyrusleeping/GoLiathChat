@@ -10,10 +10,30 @@ func main() {
 	tboxgui.Init()
 	defer tboxgui.Cleanup()
 
-	testScroolTextArea()
+	//testScrollTextArea()
+	testLayout()
 }
 
-func testScroolTextArea() {
+func testLayout() {
+	quit := false
+	termboxEvent := make(chan termbox.Event)
+
+	for !quit {
+		tboxgui.Clear()
+		tboxgui.Flush()
+
+		select {
+		case event := <-termboxEvent:
+			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
+				quit = true
+			} else {
+				
+			}
+		}
+	}
+}
+
+func testScrollTextArea() {
 	quit := false
 	termboxEvent := make(chan termbox.Event)
 	stb := tboxgui.NewScrollingTextArea(1, 1, 10, 20, 200)
