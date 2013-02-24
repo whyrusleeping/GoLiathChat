@@ -34,7 +34,6 @@ type Control struct {
 	height     int      // Height of the Control
 	max_height int      // The max height (defaults to height)
 	max_width  int      // The max width (defaults to width)
-	id         int      // The ID
 	text       string   // The text of the control
 	textlines  []string // The lines of text in the control
 }
@@ -52,7 +51,7 @@ func (c Control) Draw() {
 }
 
 // Make a new control with these parameters
-func NewControl(text string, x int, y int, max_height int, max_width int, id int) *Control {
+func NewControl(text string, x int, y int, max_height int, max_width int) *Control {
 	c := Control{}
 	c.x = x
 	c.y = y
@@ -60,7 +59,6 @@ func NewControl(text string, x int, y int, max_height int, max_width int, id int
 	c.max_height = max_height
 	c.max_width = max_width
 	c.textlines = GetLines(text, max_width)
-	c.id = id
 	if len(text) > max_width {
 		c.width = max_width
 	} else {
@@ -107,9 +105,9 @@ func (b Button) Draw() {
 }
 
 // Make a new buton
-func NewButton(text string, x int, y int, max_height int, max_width int, id int) *Button {
+func NewButton(text string, x int, y int, max_height int, max_width int) *Button {
 	b := Button{}
-	b.control = NewControl(text, x, y, max_height, max_width, id)
+	b.control = NewControl(text, x, y, max_height, max_width)
 	b.selected = false
 	return &b
 }
@@ -148,15 +146,19 @@ type TextBox struct {
 // Draw the textbox
 func (t TextBox) Draw() {
 
-	if len(t.text) < t.control.width {
+	if len(t.text) < t.control.max_width {
 		if t.Masked {
 			WriteMasked(t.control.x, t.control.y, len(t.text))
 		} else {
 			Write(t.control.x, t.control.y, t.text)
 		}
-		t.cursor.x = t.control.x + t.control.width
 	} else {
-
+		if t.Masked {
+			WriteMasked(t.control.x, t.control.y, t.control.max_width)
+		} else {
+			Write(t.control.x, t.control.y, t.text[len(t.text)-t.control.max_width:len(t.text)])
+		}
+		t.cursor.x = t.control.x + t.control.max_width
 	}
 	if t.Selected {
 		t.cursor.Draw()
@@ -164,9 +166,9 @@ func (t TextBox) Draw() {
 }
 
 // Creates a new textbox
-func NewTextBox(x, y, max_height, max_width, id int) *TextBox {
+func NewTextBox(x, y, max_width int) *TextBox {
 	t := TextBox{
-		NewControl("", x, y, max_height, max_width, id),
+		NewControl("", x, y, 1, max_width),
 		false,
 		false,
 		Cursor{x, y},
