@@ -56,7 +56,6 @@ func LoadFile(path string) (*File, error) {
 		reader = f
 	}
 
-
 	//Calculate the number of blocks needed
 	numBlocks := size / BlockSize
 	if size % BlockSize != 0 {

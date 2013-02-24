@@ -294,6 +294,8 @@ func (s *Server) loadUserList(filename string) {
 		if err != nil {
 			break
 		}
+		perm := make([]byte,1)
+		f.Read(perm)
 		phash := make([]byte, 32)
 		f.Read(phash)
 		s.PassHashes[uname] = phash
@@ -304,6 +306,7 @@ func (s *Server) saveUserList(filename string) {
 	wrbuf := new(bytes.Buffer)
 	for name, phash := range s.PassHashes {
 		wrbuf.Write(BytesFromShortString(name))
+		wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
 	}
 	f, _ := os.Create(filename)
