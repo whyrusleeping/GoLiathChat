@@ -80,6 +80,7 @@ type Button struct {
 	selected bool
 
 	OnActivated func()
+	OnKeyEvent  func(termbox.Event)
 }
 
 // Draw the button
@@ -119,6 +120,8 @@ type ScrollingTextArea struct {
 	text    []string
 	offset  int
 	wrap    bool
+
+	OnKeyEvent func(termbox.Event)
 }
 
 func (scr *ScrollingTextArea) Draw() {
@@ -135,15 +138,27 @@ func (scr *ScrollingTextArea) AddLine(text string) {
 // A Text box for entering text into
 type TextBox struct {
 	control  *Control
-	selected bool
+	Selected bool
+	Masked   bool
 	cursor   Cursor
+	position int
 	text     string
 }
 
 // Draw the textbox
 func (t TextBox) Draw() {
-	Write(t.control.x, t.control.y, t.text)
-	if t.selected {
+
+	if len(t.text) < t.control.width {
+		if t.Masked {
+			WriteMasked(t.control.x, t.control.y, len(t.text))
+		} else {
+			Write(t.control.x, t.control.y, t.text)
+		}
+		t.cursor.x = t.control.x + t.control.width
+	} else {
+
+	}
+	if t.Selected {
 		t.cursor.Draw()
 	}
 }
@@ -153,13 +168,41 @@ func NewTextBox(x, y, max_height, max_width, id int) *TextBox {
 	t := TextBox{
 		NewControl("", x, y, max_height, max_width, id),
 		false,
+		false,
 		Cursor{x, y},
+		0,
 		""}
 	return &t
 }
 
-func (t *TextBox) SetText(ntext string) {
-	t.text = ntext
+func (t *TextBox) OnKeyEvent(e termbox.Event) {
+	if e.Key == termbox.KeyArrowLeft {
+		if t.position > 0 {
+			t.position -= 1
+		}
+	} else if e.Key == termbox.KeyArrowRight {
+		if t.position < len(t.text) {
+			t.position += 1
+		}
+	} else if e.Key == termbox.KeyBackspace || e.Key == termbox.KeyBackspace2 {
+		if len(t.text) > 0 && t.position > 0 {
+			if t.position == len(t.text) {
+				t.text = t.text[0 : t.position-1]
+			} else {
+				t.text = t.text[0:t.position-1] + t.text[t.position:len(t.text)]
+			}
+			t.position -= 1
+		}
+	} else if e.Key == termbox.KeyDelete {
+		if len(t.text) > 0 && t.position < len(t.text) {
+			t.text = t.text[0:t.position] + t.text[t.position+1:len(t.text)]
+			//t.position -= 1
+		}
+	} else if e.Ch != 0 {
+		t.text = t.text[0:t.position] + string(e.Ch) + t.text[t.position:len(t.text)]
+		t.position += 1
+	}
+	t.cursor.x = t.control.x + t.position
 }
 
 // A panel
@@ -171,6 +214,8 @@ type Panel struct {
 	borderC rune
 	layout  int // 1 Horizontal 2 Vertical
 	objects []Drawable
+
+	OnKeyEvent func(termbox.Event)
 }
 
 // Draw the Panel
@@ -193,6 +238,8 @@ type ScrollPanel struct {
 	max_index int
 	min_index int
 	cur_index int
+
+	OnKeyEvent func(termbox.Event)
 }
 
 // Draw the ScrollPanel
@@ -203,6 +250,8 @@ func (s ScrollPanel) Draw() {
 type Window struct {
 	name      string
 	drawables []Drawable
+
+	OnKeyEvent func(termbox.Event)
 }
 
 func (w Window) Draw() {
@@ -340,11 +389,22 @@ func write_us(x int, y int, mess string) {
 func Write(x int, y int, mess string) {
 	sx, _ := termbox.Size()
 	if x+len(mess) > sx {
-		mess = mess[:sx]
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
 	}
 	for _, c := range mess {
 		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
 		x++
+	}
+}
+
+func WriteMasked(x, y, length int) {
+	sx, _ := termbox.Size()
+	if length+x > sx {
+		length = (length - ((length + x) - sx) - 1)
+	}
+
+	for i := 0; i < length; i += 1 {
+		termbox.SetCell(x+i, y, '*', termbox.ColorDefault, termbox.ColorDefault)
 	}
 }
 
@@ -359,7 +419,7 @@ func Write(x int, y int, mess string) {
 func WriteColor(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute) {
 	sx, _ := termbox.Size()
 	if x+len(mess) > sx {
-		mess = mess[:sx]
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
 	}
 	for _, c := range mess {
 		termbox.SetCell(x, y, c, fb, bg)
