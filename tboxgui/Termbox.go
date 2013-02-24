@@ -47,6 +47,8 @@ func NewControl(x, y, max_height, max_width int) *Control {
     c.y = y
     c.max_height = max_height
     c.max_width = max_width
+	c.height = max_height
+	c.width = max_width
     return &c
 }
 
@@ -85,7 +87,7 @@ func NewButton (text string, x int, y int, max_height int, max_width int) *Butto
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
-	text []string
+	Text []string
 	numStr int
 	offset int
 	wrap bool
@@ -102,17 +104,29 @@ func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
 }
 
 func (scr *ScrollingTextArea) Draw() {
-	Write(0,0,"test")
 	//Tenative draw function
 	for i := 0; i < scr.control.height && i < scr.numStr; i++ {
-		Write(scr.control.x, scr.control.y + i, scr.text[scr.offset + i])
+		Write(scr.control.x, scr.control.y + i, scr.Text[scr.offset + i])
+	}
+}
+
+func (scr *ScrollingTextArea) MoveUp() {
+	if scr.numStr - scr.offset > scr.control.height  {
+		scr.offset++
+	}
+}
+
+func (scr *ScrollingTextArea) MoveDown() {
+	if scr.offset > 0 {
+		scr.offset--
 	}
 }
 
 func (scr *ScrollingTextArea) AddLine(text string) {
-	if scr.numStr >= len(scr.text) {
-		scr.text[scr.numStr] = text
+		Write(1,1,"Added line " + text)
+		scr.Text[scr.numStr] = text
 		scr.numStr++
+	if scr.numStr < len(scr.Text) {
 	}
 	if scr.offset > 0 {
 		scr.offset++
