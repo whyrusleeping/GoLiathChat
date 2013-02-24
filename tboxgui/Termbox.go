@@ -16,6 +16,54 @@ type Drawable interface {
 	Draw()
 }
 
+type DrawableList struct {
+	l     []Drawable
+	count int
+}
+
+func NewDrawableList() *DrawableList {
+	return &DrawableList{make([]Drawable, 16), 0}
+}
+
+func (dl *DrawableList) Add(d Drawable) {
+	if dl.count >= len(dl.l) {
+		nl := make([]Drawable, len(dl.l)*2)
+		copy(nl, dl.l)
+		dl.l = nl
+	}
+	dl.l[dl.count] = d
+	dl.count++
+}
+
+func (dl *DrawableList) Remove(d Drawable) {
+	for i := 0; i < dl.count; i++ {
+		if d == dl.l[i] {
+			dl.RemoveAt(i)
+			return
+		}
+	}
+}
+
+func (dl *DrawableList) RemoveAt(i int) {
+	//TODO: bounds checks!
+	for ; i < dl.count-1; i++ {
+		dl.l[i] = dl.l[i+1]
+	}
+	dl.l[i] = nil
+	dl.count--
+}
+
+func (dl *DrawableList) ItemAt(i int) Drawable {
+	if i < 0 || i >= dl.count {
+		return nil
+	} else {
+		return dl.l[i]
+	}
+
+	//Pointless return statement that go requires for some reason...
+	return nil
+}
+
 // A cursor
 type Cursor struct {
 	x int
@@ -47,6 +95,8 @@ func NewControl(x, y, max_height, max_width int) *Control {
 	c.y = y
 	c.max_height = max_height
 	c.max_width = max_width
+	c.height = max_height
+	c.width = max_width
 	return &c
 }
 
@@ -62,20 +112,14 @@ type Button struct {
 // Draw the button
 func (b Button) Draw() {
 	if b.selected {
-		if len(b.text) < b.control.max_width {
-			WriteColor(b.control.x, b.control.y, b.text, termbox.ColorBlack, termbox.ColorGreen)
-		} else {
-		}
+		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorBlack, termbox.ColorGreen)
 	} else {
-		if len(b.text) < b.control.max_width {
-			WriteColor(b.control.x, b.control.y, b.text, termbox.ColorGreen, termbox.ColorBlack)
-		} else {
-		}
+		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorGreen, termbox.ColorBlack)
 	}
 }
 
 // Make a new buton
-func NewButton(text string, x int, y int, max_height int, max_width int) *Button {
+func NewButton(text string, x, y, max_height, max_width int) *Button {
 	b := Button{}
 	b.control = NewControl(x, y, max_height, max_width)
 	b.selected = false
@@ -85,7 +129,7 @@ func NewButton(text string, x int, y int, max_height int, max_width int) *Button
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
-	text    []string
+	Text    []string
 	numStr  int
 	offset  int
 	wrap    bool
@@ -102,21 +146,35 @@ func NewScrollingTextArea(x, y, height, width, maxlines int) *ScrollingTextArea 
 }
 
 func (scr *ScrollingTextArea) Draw() {
-	Write(0,0,"test")
 	//Tenative draw function
 	for i := 0; i < scr.control.height && i < scr.numStr; i++ {
-		Write(scr.control.x, scr.control.y+i, scr.text[scr.offset+i])
+		//No wrap
+		str := scr.Text[scr.offset+i][:scr.control.width]
+		Write(scr.control.x, scr.control.y+i, str)
 	}
 }
 
 func (scr *ScrollingTextArea) AddLine(text string) {
-	if scr.numStr >= len(scr.text) {
-		scr.text[scr.numStr] = text
+	if scr.numStr >= len(scr.Text) {
+		scr.Text[scr.numStr] = text
 		scr.numStr++
 	}
 	if scr.offset > 0 {
 		scr.offset++
 	}
+}
+
+func (scr *ScrollingTextArea) MoveUp() {
+	if scr.numStr-scr.offset > scr.control.height {
+		scr.offset++
+	}
+}
+
+func (scr *ScrollingTextArea) MoveDown() {
+	if scr.offset > 0 {
+		scr.offset--
+	}
+
 }
 
 // A Text box for entering text into

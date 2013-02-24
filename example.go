@@ -29,7 +29,7 @@ func main() {
 	stb.AddLine("text")
 	stb.AddLine("whats???")
 	stb.AddLine("i dont know")
-
+	tboxgui.Flush()
 
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
@@ -43,6 +43,10 @@ func main() {
 		case event := <-termboxEvent:
 			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
 				quit = true
+			} else if event.Key == termbox.KeyArrowDown {
+				stb.MoveDown()
+			} else if event.Key == termbox.KeyArrowUp {
+				stb.MoveUp()
 			} else {
 				//txt.OnKeyEvent(event)
 			}
