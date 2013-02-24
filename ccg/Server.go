@@ -6,13 +6,13 @@ import (
 	"container/list"
 	"crypto/rand"
 	"crypto/tls"
-	"strings"
 	"errors"
-	"time"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strings"
+	"time"
 )
 
 type Server struct {
@@ -68,7 +68,6 @@ func StartServer() *Server {
 	s.parse = make(chan Packet, 10) //Channel for parsed messages to be sent
 	return &s
 }
-
 
 func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	log.Println("New connection!")
@@ -173,15 +172,13 @@ func (s *Server) Listen() {
 //Handles all incoming user commands
 func (s *Server) command(p Packet) {
 	cmd := extractCommand(string(p.Payload))
-	args := strings.Split(string(p.Payload)," ")
+	args := strings.Split(string(p.Payload), " ")
 	switch cmd {
 	case "accept":
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
 		} else {
 			s.PassHashes[args[1]] = s.regReqs[args[1]]
-			fmt.Printf("|%s|\n",args[1])
-			fmt.Println(s.regReqs[args[1]])
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList("users.f")
@@ -213,17 +210,16 @@ func (s *Server) MessageHandler() {
 			s.command(p)
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
-			fname,_ := ReadShortString(buf)
-			fmt.Printf("User %s wants to upload %s.\n",p.Username,fname)
+			fname, _ := ReadShortString(buf)
+			fmt.Printf("User %s wants to upload %s.\n", p.Username, fname)
 			nblocks := ReadInt32(buf)
 			flags,_ := buf.ReadByte()
 			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
-			fname,_ := ReadShortString(buf)
+			fname, _ := ReadShortString(buf)
 			packID := ReadInt32(buf)
 			nbytes := ReadInt32(buf)
-			fmt.Printf("Nbytes: %d\n",nbytes)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
 			s.uplFiles[fname].data[packID] = blck
@@ -258,9 +254,9 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		b := p.GetBytes()
-		for uname,u := range s.users {
+		for uname, u := range s.users {
 			if !u.connected {
-				delete(s.users,uname)
+				delete(s.users, uname)
 			} else {
 				_, err := u.Conn.Write(b)
 				if err != nil {

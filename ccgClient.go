@@ -1,11 +1,11 @@
 /************************
 
 Go Command Chat
-	-Jeromy Johnson, Travis Lane
-	A command line chat system that 
-	will make it easy to set up a 
-	quick secure chat room for any 
-	number of people
+-Jeromy Johnson, Travis Lane
+A command line chat system that 
+will make it easy to set up a 
+quick secure chat room for any 
+number of people
 
 ************************/
 
@@ -13,6 +13,7 @@ package main
 
 import (
 	"./ccg"
+	"./tboxgui"
 	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
@@ -39,7 +40,7 @@ func main() {
 	if termErr != nil {
 		panic(termErr)
 	}
-	defer func(){
+	defer func() {
 		termbox.Close()
 	}()
 
@@ -48,8 +49,8 @@ func main() {
 	for !quit && !loggedin {
 		quit, loggedin = displayLoginWindow(serv)
 	}
-	ccg.Clear()
-	ccg.Flush()
+	tboxgui.Clear()
+	tboxgui.Flush()
 
 	//loggedin,_ = serv.Login("Username", "password",0)
 	if loggedin && !quit {
@@ -78,40 +79,42 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	// 3 Options
 	// 4 Register
 	box := 0
-	
+
 	const max_box = 4
-  const min_box = 0
-  
-	
+	const min_box = 0
+
 	//login_message := ""
 	termboxEvent := make(chan termbox.Event)
-	
+
 	// Update the login window
-  updateWindow := func() {
-	  ccg.Clear()
-	  sx, sy := termbox.Size()
-
-	  name_lines := ccg.GetLines(name, sx-2)
-	  pass_lines := ccg.GetLines(pass, sx-2)
-	  err_lines := ccg.GetLines(login_err, sx-2)
-
-	  ccg.WriteCenter((sy/2)-len(name_lines)-1, "Username:")
-	  ccg.WriteCenterWrap((sy/2)-len(name_lines), name_lines)
-	  ccg.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
-	  ccg.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
-
-	  ccg.WriteCenterWrap(sy-len(err_lines), err_lines)
-	  ccg.Flush()
-  }
-
-	eventHandler := ccg.NewTermboxEventHandler()
+	updateWindow := func() {
 	
 	
-	eventHandler.KeyEvents[termbox.KeyCtrlR] = func(_ termbox.Event) {
-	  displayRegisterWindow(serv, termboxEvent)
-	  updateWindow()
+		tboxgui.Clear()
+		sx, sy := termbox.Size()
+
+		name_lines := tboxgui.GetLines(name, sx-2)
+		pass_lines := tboxgui.GetLines(pass, sx-2)
+		err_lines := tboxgui.GetLines(login_err, sx-2)
+
+		tboxgui.WriteCenter((sy/2)-len(name_lines)-1, "Username:")
+		tboxgui.WriteCenterWrap((sy/2)-len(name_lines), name_lines)
+		tboxgui.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
+		tboxgui.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
+
+		by := (sy/2)+len(name_lines)+2+len(pass_lines)+1
+
+		loginText := "Login"
+		optionText := "Options"
+		RegisterText := "Register"
+		tboxgui.DrawButton(loginText, (box == 2), (sx/2)-(len(loginText) + 4) - ((len(optionText) +4)/2), by)
+		tboxgui.DrawButton(optionText, (box == 3), (sx/2) - ((len(optionText) + 4) /2), by)
+		tboxgui.DrawButton(RegisterText, (box == 4), 40, by)
+		tboxgui.WriteCenterWrap(sy-len(err_lines), err_lines)
+		tboxgui.Flush()
 	}
-	
+
+	eventHandler := tboxgui.NewTermboxEventHandler()
 
 	eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
 		if box == 0 {
@@ -126,6 +129,16 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 				updateWindow()
 				login, login_err = serv.Login(name, pass, 0)
 			}
+		} else if box == 2 {
+			login_err = "Logging in..."
+			updateWindow()
+			login, login_err = serv.Login(name, pass, 0)
+		} else if box == 3 {
+			login_err = "Not implemented.."
+			updateWindow()
+		} else if box == 4 {
+			displayRegisterWindow(serv, termboxEvent)
+			updateWindow()
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
@@ -151,18 +164,18 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
-	  if box > min_box {
-	    box -= 1
-	  } else {
-	    box = max_box
-	  }
+		if box > min_box {
+			box -= 1
+		} else {
+			box = max_box
+		}
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
-    if box < max_box {
-      box += 1
-    } else {
-      box = min_box
-     }
+		if box < max_box {
+			box += 1
+		} else {
+			box = min_box
+		}
 	}
 	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
 		if box == 0 && len(name) < 64 {
@@ -172,7 +185,11 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyTab] = func(_ termbox.Event) {
-
+		if box == max_box {
+			box = min_box
+		} else {
+			box += 1
+		}
 	}
 	eventHandler.OnDefault = func(event termbox.Event) {
 		if event.Ch != 0 {
@@ -183,8 +200,8 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 			}
 		}
 	}
-	
-  updateWindow()
+
+	updateWindow()
 
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
@@ -192,7 +209,7 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 	for !quit && !login {
 		select {
 		case event := <-termboxEvent:
-			ccg.TermboxSwitch(event, eventHandler)
+			tboxgui.TermboxSwitch(event, eventHandler)
 			updateWindow()
 		}
 	}
@@ -207,47 +224,47 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 // ********************************************** 
 
 func displayRegisterWindow(serv *ccg.Host, termboxEvent chan termbox.Event) {
-  quit := false
-  done := false
-  username := ""
-  password := ""
-  passwordVerify := ""
-  const max_box = 2
-  const min_box = 0
-  //  0 = Username
-  //  1 = Password  
-  //  2 = Password Verify
-  box := min_box 
+	quit := false
+	done := false
+	username := ""
+	password := ""
+	passwordVerify := ""
+	const max_box = 2
+	const min_box = 0
+	//  0 = Username
+	//  1 = Password  
+	//  2 = Password Verify
+	box := min_box
 
-	eventHandler := ccg.NewTermboxEventHandler()
-  
-  updateWindow := func() {
-    ccg.Clear()
-	  sx, _ := termbox.Size()
+	eventHandler := tboxgui.NewTermboxEventHandler()
 
-	  username_lines := ccg.GetLines(username, sx-2)
-	  password_lines := ccg.GetLines(password, sx-2)
-	  passwordVerify_lines := ccg.GetLines(passwordVerify, sx-2)
+	updateWindow := func() {
+		tboxgui.Clear()
+		sx, _ := termbox.Size()
 
-    ccg.WriteCenter(1, "Username")
-    ccg.WriteCenterWrap(2, username_lines)
-    ccg.WriteCenter(4, "Password")
-    ccg.WriteCenterWrap(5, password_lines)
-    ccg.WriteCenter(7, "Password Verify")
-    ccg.WriteCenterWrap(8, passwordVerify_lines)
-    
-	  ccg.Flush()
-  }
-  
-  eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
+		username_lines := tboxgui.GetLines(username, sx-2)
+		password_lines := tboxgui.GetLines(password, sx-2)
+		passwordVerify_lines := tboxgui.GetLines(passwordVerify, sx-2)
+
+		tboxgui.WriteCenter(1, "Username")
+		tboxgui.WriteCenterWrap(2, username_lines)
+		tboxgui.WriteCenter(4, "Password")
+		tboxgui.WriteCenterWrap(5, password_lines)
+		tboxgui.WriteCenter(7, "Password Verify")
+		tboxgui.WriteCenterWrap(8, passwordVerify_lines)
+
+		tboxgui.Flush()
+	}
+
+	eventHandler.KeyEvents[termbox.KeyEnter] = func(_ termbox.Event) {
 		if box == 0 {
 			box = 1
 		} else if box == 1 {
-      box = 2
+			box = 2
 		} else if box == 2 {
-		  if(password == passwordVerify) {
-		    serv.Register(username, password)
-		  }
+			if password == passwordVerify {
+				serv.Register(username, password)
+			}
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
@@ -277,24 +294,24 @@ func displayRegisterWindow(serv *ccg.Host, termboxEvent chan termbox.Event) {
 		}
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowUp] = func(_ termbox.Event) {
-	  if box > min_box {
-	    box -= 1
-	  } else {
-	    box = max_box
-	  }
+		if box > min_box {
+			box -= 1
+		} else {
+			box = max_box
+		}
 	}
 	eventHandler.KeyEvents[termbox.KeyArrowDown] = func(_ termbox.Event) {
-    if box < max_box {
-      box += 1
-    } else {
-      box = min_box
-     }
+		if box < max_box {
+			box += 1
+		} else {
+			box = min_box
+		}
 	}
 	eventHandler.KeyEvents[termbox.KeySpace] = func(_ termbox.Event) {
 		if box == 1 && len(password) < 64 {
 			password += " "
 		} else if box == 2 && len(passwordVerify) < 64 {
-		  passwordVerify += " "
+			passwordVerify += " "
 		}
 	}
 	eventHandler.OnDefault = func(event termbox.Event) {
@@ -308,17 +325,16 @@ func displayRegisterWindow(serv *ccg.Host, termboxEvent chan termbox.Event) {
 			}
 		}
 	}
-  
-  updateWindow()
-  for !quit && !done {
+
+	updateWindow()
+	for !quit && !done {
 		select {
 		case event := <-termboxEvent:
-			ccg.TermboxSwitch(event, eventHandler)
+			tboxgui.TermboxSwitch(event, eventHandler)
 			updateWindow()
 		}
 	}
 }
-
 
 // *********************************************
 // **************** Chat Window ****************
@@ -332,18 +348,18 @@ func displayChatWindow(serv *ccg.Host) {
 	start_message := 0
 	messages := list.New()
 	termboxEvent := make(chan termbox.Event)
-	eventHandler := ccg.NewTermboxEventHandler()
+	eventHandler := tboxgui.NewTermboxEventHandler()
 
 	eventHandler.KeyEvents[termbox.KeyCtrlQ] = func(_ termbox.Event) {
-		ccg.Clear()
-		ccg.MessageUs("Exiting...")
-		ccg.Flush()
+		tboxgui.Clear()
+		tboxgui.MessageUs("Exiting...")
+		tboxgui.Flush()
 		time.Sleep(time.Second * 2)
 		running = false
 	}
 	eventHandler.KeyEvents[termbox.KeyCtrlC] = func(_ termbox.Event) {
-		ccg.Clear()
-		ccg.Flush()
+		tboxgui.Clear()
+		tboxgui.Flush()
 		running = false
 
 	}
@@ -379,40 +395,39 @@ func displayChatWindow(serv *ccg.Host) {
 		}
 	}
 	eventHandler.OnDefault = func(keyEvent termbox.Event) {
-	  if keyEvent.Ch != 0 {
-		  if len(input) <= 160 {
-			  input += string(keyEvent.Ch)
-		  }
-	  }
+		if keyEvent.Ch != 0 {
+			if len(input) <= 160 {
+				input += string(keyEvent.Ch)
+			}
+		}
 	}
 	eventHandler.OnResize = func(_ termbox.Event) {
 
 	}
 
 	// Display the window
-	ccg.Clear()
+	tboxgui.Clear()
 	updateChatWindow(input, messages, start_message)
-	ccg.Flush()
+	tboxgui.Flush()
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
 	// Run the main loop
 	for running {
 		select {
 		case event := <-termboxEvent:
-			ccg.TermboxSwitch(event, eventHandler)
-			ccg.Clear()
+			tboxgui.TermboxSwitch(event, eventHandler)
+			tboxgui.Clear()
 			updateChatWindow(input, messages, start_message)
-			ccg.Flush()
+			tboxgui.Flush()
 		case serverEvent := <-serv.Reader:
 			message := MessageObject{string(serverEvent.Payload), serverEvent.Username, time.Now().Second()}
 			messages.PushFront(message)
-			ccg.Clear()
+			tboxgui.Clear()
 			updateChatWindow(input, messages, start_message)
-			ccg.Flush()
+			tboxgui.Flush()
 		}
 	}
 }
-
 
 //Updates the chat
 func updateChatWindow(input string, messages *list.List, start_message int) {
@@ -437,24 +452,24 @@ func displayMessages(messages *list.List, offset int, input_top int) {
 	for ; p != nil; p = p.Next() {
 
 		cur := p.Value.(MessageObject)
-		lines := ccg.GetLines(cur.message, sx)
-		//ccg.FillH("-", 0, sy-line_cursor, sx)
+		lines := tboxgui.GetLines(cur.message, sx)
+		//tboxgui.FillH("-", 0, sy-line_cursor, sx)
 
 		line_cursor += 1
 		for i := len(lines) - 1; i >= 0; i-- {
-			ccg.Write(0, sy-line_cursor, lines[i])
+			tboxgui.Write(0, sy-line_cursor, lines[i])
 			line_cursor += 1
 		}
 		if p.Next() != nil {
 			if p.Next().Value.(MessageObject).sender == cur.sender {
 				line_cursor -= 1
 			} else {
-				ccg.Write(0, sy-line_cursor, cur.sender)
-				ccg.FillH("-", len(cur.sender), sy-line_cursor, sx)
+				tboxgui.Write(0, sy-line_cursor, cur.sender)
+				tboxgui.FillH("-", len(cur.sender), sy-line_cursor, sx)
 			}
 		} else {
-			ccg.Write(0, sy-line_cursor, cur.sender)
-			ccg.FillH("-", len(cur.sender), sy-line_cursor, sx)
+			tboxgui.Write(0, sy-line_cursor, cur.sender)
+			tboxgui.FillH("-", len(cur.sender), sy-line_cursor, sx)
 		}
 	}
 }
@@ -466,22 +481,20 @@ func displayInput(input string) int {
 	if input == "" {
 		termbox.SetCursor(0, sy-line_cursor)
 		line_cursor += 1
-		ccg.FillH("-", 0, sy-line_cursor, sx)
+		tboxgui.FillH("-", 0, sy-line_cursor, sx)
 		return line_cursor
 	} else {
-		lines := ccg.GetLines(input, sx)
+		lines := tboxgui.GetLines(input, sx)
 		for i := len(lines) - 1; i >= 0; i-- {
-			ccg.Write(0, sy-line_cursor, lines[i])
+			tboxgui.Write(0, sy-line_cursor, lines[i])
 			line_cursor += 1
 		}
 		termbox.SetCursor(len(lines[len(lines)-1]), sy-1)
-		ccg.FillH("-", 0, sy-line_cursor, sx)
+		tboxgui.FillH("-", 0, sy-line_cursor, sx)
 		return line_cursor
 	}
 	return 1
 }
-
-
 
 // *********************************************
 // ************** Other Functions **************
@@ -492,6 +505,3 @@ func termboxEventPoller(event chan<- termbox.Event) {
 		event <- termbox.PollEvent()
 	}
 }
-
-
-

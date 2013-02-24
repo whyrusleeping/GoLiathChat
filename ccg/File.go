@@ -1,8 +1,8 @@
 package ccg
 
 import (
-	"os"
 	"bytes"
+	"os"
 	"io"
 	"io/ioutil"
 	"compress/gzip"
@@ -11,15 +11,15 @@ import (
 //A struct to represent a File broken into blocks for transfer
 type File struct {
 	Filename string
-	blocks int32
-	data []*block
+	blocks   int32
+	data     []*block
 	compr byte
 }
 
 //A block of file data tagged with its index
 type block struct {
 	blockNum uint32
-	data []byte
+	data     []byte
 }
 
 //Having blocksize at 32768 causes a strange error i have yet to track down
@@ -29,14 +29,14 @@ const BlockSize = 4096
 //Loads the given file from the hard drive and breaks into blocks
 func LoadFile(path string) (*File, error) {
 	//Open File
-	f,err := os.Open(path)
+	f, err := os.Open(path)
 	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
 
 	//Get file info and calculate block count
-	finfo,_ := os.Stat(path)
+	finfo, _ := os.Stat(path)
 	size := finfo.Size()
 	compr := false
 	if size > BlockSize {
@@ -58,7 +58,7 @@ func LoadFile(path string) (*File, error) {
 
 	//Calculate the number of blocks needed
 	numBlocks := size / BlockSize
-	if size % BlockSize != 0 {
+	if size%BlockSize != 0 {
 		numBlocks++
 	}
 
@@ -75,7 +75,7 @@ func LoadFile(path string) (*File, error) {
 
 	//Read the file into blocks
 	blockCount := 0
-	for ;size >= BlockSize;blockCount++ {
+	for ; size >= BlockSize; blockCount++ {
 		b := NewBlock(BlockSize)
 		size -= BlockSize
 		reader.Read(b.data)
@@ -142,7 +142,6 @@ func (f *File) getBytesForBlock(num int) []byte {
 	buf.Write(f.data[num].data)
 	return buf.Bytes()
 }
-
 
 //Some thoughts:
 //
