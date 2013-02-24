@@ -11,9 +11,9 @@ func main() {
 	tboxgui.Init()
 	defer tboxgui.Cleanup()
 
-	txt := tboxgui.NewTextBox(2, 2, 5, 15, 1)
+	txt := tboxgui.NewTextBox(2, 2, 15)
 	txt.Selected = true
-	txt.Masked = true
+	//txt.Masked = true
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
 

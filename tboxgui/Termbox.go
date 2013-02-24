@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	horizontal = iota
-	vertical
+	Horizontal = iota
+	Vertical
 )
 
 // Any object that is drawable
@@ -28,12 +28,12 @@ func (c Cursor) Draw() {
 }
 
 type Control struct {
-  x int               // Starting X Position
-  y int               // Starting Y Position
-  width int           // Width of the Control
-  height int          // Height of the Control
-  max_height int      // The max height (defaults to height)
-  max_width int       // The max width (defaults to width)
+	x          int // Starting X Position
+	y          int // Starting Y Position
+	width      int // Width of the Control
+	height     int // Height of the Control
+	max_height int // The max height (defaults to height)
+	max_width  int // The max width (defaults to width)
 }
 
 // Draw the control
@@ -42,58 +42,58 @@ func (c Control) Draw() {
 
 // Make a new control with these parameters
 func NewControl(x, y, max_height, max_width int) *Control {
-    c := Control{}
-    c.x = x
-    c.y = y
-    c.max_height = max_height
-    c.max_width = max_width
-    return &c
+	c := Control{}
+	c.x = x
+	c.y = y
+	c.max_height = max_height
+	c.max_width = max_width
+	return &c
 }
 
 // A button object
 type Button struct {
-	control  *Control
-	selected bool
-	text string
+	control     *Control
+	selected    bool
+	text        string
 	OnActivated func()
 	OnKeyEvent  func(termbox.Event)
 }
 
 // Draw the button
 func (b Button) Draw() {
-  if b.selected {
-    if len(b.text) < b.control.max_width {
-      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorBlack, termbox.ColorGreen)
-    } else {
-    }
-  } else {
-    if len(b.text) < b.control.max_width {
-      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorGreen, termbox.ColorBlack)
-    } else {
-    }
-  }
+	if b.selected {
+		if len(b.text) < b.control.max_width {
+			WriteColor(b.control.x, b.control.y, b.text, termbox.ColorBlack, termbox.ColorGreen)
+		} else {
+		}
+	} else {
+		if len(b.text) < b.control.max_width {
+			WriteColor(b.control.x, b.control.y, b.text, termbox.ColorGreen, termbox.ColorBlack)
+		} else {
+		}
+	}
 }
 
 // Make a new buton
-func NewButton (text string, x int, y int, max_height int, max_width int) *Button {
-  b := Button{}
-  b.control = NewControl(x,y,max_height,max_width)
-  b.selected = false
-  return &b
+func NewButton(text string, x int, y int, max_height int, max_width int) *Button {
+	b := Button{}
+	b.control = NewControl(x, y, max_height, max_width)
+	b.selected = false
+	return &b
 }
 
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
-	text []string
-	numStr int
-	offset int
-	wrap bool
+	text    []string
+	numStr  int
+	offset  int
+	wrap    bool
 }
 
-func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
+func NewScrollingTextArea(x, y, height, width, maxlines int) *ScrollingTextArea {
 	scr := ScrollingTextArea{
-		NewControl(x,y,height,width),
+		NewControl(x, y, height, width),
 		make([]string, maxlines),
 		0,
 		0,
@@ -104,7 +104,7 @@ func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
 func (scr *ScrollingTextArea) Draw() {
 	//Tenative draw function
 	for i := 0; i < scr.control.height; i++ {
-		Write(scr.control.x, scr.control.y + i, scr.text[scr.offset + i])
+		Write(scr.control.x, scr.control.y+i, scr.text[scr.offset+i])
 	}
 }
 
@@ -194,30 +194,38 @@ func (t *TextBox) OnKeyEvent(e termbox.Event) {
 
 // A panel
 type Panel struct {
-	control *Control
-	border  bool
-	borderH rune
-	borderV rune
-	borderC rune
-	layout  int // 1 Horizontal 2 Vertical
-	objects []Drawable
+	control  *Control
+	HPercent int
+	VPercent int
+	Layout   int        // 1 Horizontal 2 Vertical
+	objects  *list.List // Drawable
 
 	OnKeyEvent func(termbox.Event)
 }
 
 // Draw the Panel
 func (p Panel) Draw() {
-	for _, object := range p.objects {
-		object.Draw()
+	var d Drawable
+	for object := p.objects.Front(); object != nil; object = object.Next() {
+		d = object.Value.(Drawable)
+		d.Draw()
 	}
 }
 
 func (p Panel) Resize() {
-	if p.layout == horizontal {
+	if p.Layout == Horizontal {
 
-	} else if p.layout == vertical {
+	} else if p.Layout == Vertical {
 
 	}
+}
+
+func (p Panel) AddObject(d Drawable) {
+	p.objects.PushBack(d)
+}
+
+func (p Panel) RemoveObject(d Drawable) {
+
 }
 
 type ScrollPanel struct {
@@ -235,15 +243,17 @@ func (s ScrollPanel) Draw() {
 }
 
 type Window struct {
-	name      string
-	drawables []Drawable
+	name    string
+	objects *list.List // Drawable
 
 	OnKeyEvent func(termbox.Event)
 }
 
 func (w Window) Draw() {
-	for _, object := range w.drawables {
-		object.Draw()
+	var d Drawable
+	for object := w.objects.Front(); object != nil; object = object.Next() {
+		d = object.Value.(Drawable)
+		d.Draw()
 	}
 }
 
