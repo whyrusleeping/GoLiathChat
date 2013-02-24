@@ -64,20 +64,14 @@ type Button struct {
 // Draw the button
 func (b Button) Draw() {
   if b.selected {
-    if len(b.text) < b.control.max_width {
-      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorBlack, termbox.ColorGreen)
-    } else {
-    }
+	  WriteColor(b.control.x,b.control.y,b.text[:b.control.width], termbox.ColorBlack, termbox.ColorGreen)
   } else {
-    if len(b.text) < b.control.max_width {
-      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorGreen, termbox.ColorBlack)
-    } else {
-    }
+      WriteColor(b.control.x,b.control.y,b.text[:b.control.width], termbox.ColorGreen, termbox.ColorBlack)
   }
 }
 
 // Make a new buton
-func NewButton (text string, x int, y int, max_height int, max_width int) *Button {
+func NewButton (text string, x, y, max_height, max_width int) *Button {
   b := Button{}
   b.control = NewControl(x,y,max_height,max_width)
   b.selected = false
@@ -106,7 +100,9 @@ func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
 func (scr *ScrollingTextArea) Draw() {
 	//Tenative draw function
 	for i := 0; i < scr.control.height && i < scr.numStr; i++ {
-		Write(scr.control.x, scr.control.y + i, scr.Text[scr.offset + i])
+		//No wrap
+		str := scr.Text[scr.offset + i][:scr.control.width]
+		Write(scr.control.x, scr.control.y + i, str)
 	}
 }
 
