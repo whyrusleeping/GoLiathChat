@@ -28,109 +28,94 @@ func (c Cursor) Draw() {
 }
 
 type Control struct {
-	x          int      // Starting X Position
-	y          int      // Starting Y Position
-	width      int      // Width of the Control
-	height     int      // Height of the Control
-	max_height int      // The max height (defaults to height)
-	max_width  int      // The max width (defaults to width)
-	text       string   // The text of the control
-	textlines  []string // The lines of text in the control
+  x int               // Starting X Position
+  y int               // Starting Y Position
+  width int           // Width of the Control
+  height int          // Height of the Control
+  max_height int      // The max height (defaults to height)
+  max_width int       // The max width (defaults to width)
 }
 
 // Draw the control
 func (c Control) Draw() {
-	if len(c.text) < c.max_width {
-		Write(c.x, c.y, c.text)
-	} else {
-		c.textlines = GetLines(c.text, c.max_width)
-		for i, line := range c.textlines {
-			Write(c.x, c.y+i, line)
-		}
-	}
 }
 
 // Make a new control with these parameters
-func NewControl(text string, x int, y int, max_height int, max_width int) *Control {
-	c := Control{}
-	c.x = x
-	c.y = y
-	c.text = text
-	c.max_height = max_height
-	c.max_width = max_width
-	c.textlines = GetLines(text, max_width)
-	if len(text) > max_width {
-		c.width = max_width
-	} else {
-		c.width = len(text)
-	}
-	if len(c.textlines) < max_height {
-		c.height = len(c.textlines)
-	} else {
-		c.height = max_height
-	}
-	return &c
+func NewControl(x, y, max_height, max_width int) *Control {
+    c := Control{}
+    c.x = x
+    c.y = y
+    c.max_height = max_height
+    c.max_width = max_width
+    return &c
 }
 
 // A button object
 type Button struct {
 	control  *Control
 	selected bool
-
+	text string
 	OnActivated func()
 	OnKeyEvent  func(termbox.Event)
 }
 
 // Draw the button
 func (b Button) Draw() {
-	if b.selected {
-		if len(b.control.text) < b.control.max_width {
-			WriteColor(b.control.x, b.control.y, b.control.text, termbox.ColorBlack, termbox.ColorGreen)
-		} else {
-			b.control.textlines = GetLines(b.control.text, b.control.max_width)
-			for i, line := range b.control.textlines {
-				WriteColor(b.control.x, b.control.y+i, line, termbox.ColorBlack, termbox.ColorGreen)
-			}
-		}
-	} else {
-		if len(b.control.text) < b.control.max_width {
-			WriteColor(b.control.x, b.control.y, b.control.text, termbox.ColorGreen, termbox.ColorBlack)
-		} else {
-			b.control.textlines = GetLines(b.control.text, b.control.max_width)
-			for i, line := range b.control.textlines {
-				WriteColor(b.control.x, b.control.y+i, line, termbox.ColorGreen, termbox.ColorBlack)
-			}
-		}
-	}
+  if b.selected {
+    if len(b.text) < b.control.max_width {
+      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorBlack, termbox.ColorGreen)
+    } else {
+    }
+  } else {
+    if len(b.text) < b.control.max_width {
+      WriteColor(b.control.x,b.control.y,b.text, termbox.ColorGreen, termbox.ColorBlack)
+    } else {
+    }
+  }
 }
 
 // Make a new buton
-func NewButton(text string, x int, y int, max_height int, max_width int) *Button {
-	b := Button{}
-	b.control = NewControl(text, x, y, max_height, max_width)
-	b.selected = false
-	return &b
+func NewButton (text string, x int, y int, max_height int, max_width int) *Button {
+  b := Button{}
+  b.control = NewControl(x,y,max_height,max_width)
+  b.selected = false
+  return &b
 }
 
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
-	text    []string
-	offset  int
-	wrap    bool
+	text []string
+	numStr int
+	offset int
+	wrap bool
+}
 
-	OnKeyEvent func(termbox.Event)
+func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
+	scr := ScrollingTextArea{
+		NewControl(x,y,height,width),
+		make([]string, maxlines),
+		0,
+		0,
+		false}
+	return &scr
 }
 
 func (scr *ScrollingTextArea) Draw() {
 	//Tenative draw function
 	for i := 0; i < scr.control.height; i++ {
-		Write(scr.control.x, scr.control.y+i, scr.text[scr.offset+i])
+		Write(scr.control.x, scr.control.y + i, scr.text[scr.offset + i])
 	}
 }
 
 func (scr *ScrollingTextArea) AddLine(text string) {
-
+	if scr.numStr >= len(scr.text) {
+		scr.text[scr.numStr] = text
+		scr.numStr++
+	}
+	if scr.offset > 0 {
+		scr.offset++
+	}
 }
 
 // A Text box for entering text into
@@ -168,7 +153,7 @@ func (t TextBox) Draw() {
 // Creates a new textbox
 func NewTextBox(x, y, max_width int) *TextBox {
 	t := TextBox{
-		NewControl("", x, y, 1, max_width),
+		NewControl(x, y, 1, max_width),
 		false,
 		false,
 		Cursor{x, y},
