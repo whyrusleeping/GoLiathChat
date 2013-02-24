@@ -93,6 +93,7 @@ func NewButton (text string, x int, y int, max_height int, max_width int) *Butto
 type ScrollingTextArea struct {
 	control *Control
 	text []string
+	numStr int
 	offset int
 	wrap bool
 }
@@ -114,7 +115,13 @@ func (scr *ScrollingTextArea) Draw() {
 }
 
 func (scr *ScrollingTextArea) AddLine(text string) {
-	
+	if scr.numStr >= len(scr.text) {
+		scr.text[scr.numStr] = text
+		scr.numStr++
+	}
+	if scr.offset > 0 {
+		scr.offset++
+	}
 }
 
 // A Text box for entering text into
