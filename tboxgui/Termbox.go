@@ -47,7 +47,6 @@ func NewControl(x, y, max_height, max_width int) *Control {
     c.y = y
     c.max_height = max_height
     c.max_width = max_width
-    c.id = id
     return &c
 }
 
@@ -66,19 +65,11 @@ func (b Button) Draw() {
     if len(b.text) < b.control.max_width {
       WriteColor(b.control.x,b.control.y,b.text, termbox.ColorBlack, termbox.ColorGreen)
     } else {
-      b.control.textlines = GetLines(b.text, b.control.max_width)
-      for i, line := range b.control.textlines {
-        WriteColor(b.control.x, b.control.y+i,line, termbox.ColorBlack, termbox.ColorGreen)
-	    }
     }
   } else {
     if len(b.text) < b.control.max_width {
       WriteColor(b.control.x,b.control.y,b.text, termbox.ColorGreen, termbox.ColorBlack)
     } else {
-      b.control.textlines = GetLines(b.text, b.control.max_width)
-      for i, line := range b.control.textlines {
-        WriteColor(b.control.x, b.control.y+i,line, termbox.ColorGreen, termbox.ColorBlack)
-	    }
     }
   }
 }
@@ -86,7 +77,7 @@ func (b Button) Draw() {
 // Make a new buton
 func NewButton (text string, x int, y int, max_height int, max_width int) *Button {
   b := Button{}
-  b.control = NewControl(text,x,y,max_height,max_width)
+  b.control = NewControl(x,y,max_height,max_width)
   b.selected = false
   return &b
 }
@@ -100,10 +91,11 @@ type ScrollingTextArea struct {
 	wrap bool
 }
 
-func NewScrollingTextArea(x,y,height,width,maxlines int) ScrollingTextArea {
+func NewScrollingTextArea(x,y,height,width,maxlines int) *ScrollingTextArea {
 	scr := ScrollingTextArea{
-		NewControl("",x,y,height,width,0),
+		NewControl(x,y,height,width),
 		make([]string, maxlines),
+		0,
 		0,
 		false}
 	return &scr
@@ -112,7 +104,7 @@ func NewScrollingTextArea(x,y,height,width,maxlines int) ScrollingTextArea {
 func (scr *ScrollingTextArea) Draw() {
 	//Tenative draw function
 	for i := 0; i < scr.control.height; i++ {
-		Write(scr.control.x, scr.control.y + i, scr.text[offset + i])
+		Write(scr.control.x, scr.control.y + i, scr.text[scr.offset + i])
 	}
 }
 
@@ -157,7 +149,7 @@ func (t TextBox) Draw() {
 // Creates a new textbox
 func NewTextBox(x, y, max_height, max_width, id int) *TextBox {
 	t := TextBox{
-		NewControl("", x, y, max_height, max_width, id),
+		NewControl(x, y, max_height, max_width),
 		false,
 		false,
 		Cursor{x, y},
