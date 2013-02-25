@@ -6,16 +6,37 @@ import (
 )
 
 func main() {
-	quit := false
-	termboxEvent := make(chan termbox.Event)
+
 	tboxgui.Init()
 	defer tboxgui.Cleanup()
 
-	//txt := tboxgui.NewTextBox(2, 2, 5, 15, 1)
-	//txt.Selected = true
-	//txt.Masked = true
+	//testScrollTextArea()
+	testLayout()
+}
 
-	stb := tboxgui.NewScrollingTextArea(1,1,10,20,200)
+func testLayout() {
+	quit := false
+	termboxEvent := make(chan termbox.Event)
+
+	for !quit {
+		tboxgui.Clear()
+		tboxgui.Flush()
+
+		select {
+		case event := <-termboxEvent:
+			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
+				quit = true
+			} else {
+
+			}
+		}
+	}
+}
+
+func testScrollTextArea() {
+	quit := false
+	termboxEvent := make(chan termbox.Event)
+	stb := tboxgui.NewScrollingTextArea("TestScrollingTextArea", 1, 1, 10, 20, 200)
 	stb.AddLine("Hello")
 	stb.AddLine("Line")
 	stb.AddLine("after")
@@ -57,6 +78,7 @@ func main() {
 			}
 		}
 	}
+
 }
 
 func termboxEventPoller(event chan<- termbox.Event) {

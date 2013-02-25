@@ -10,4 +10,4 @@ server:
 	go build -o bin/server ccgServer.go
 
 tbexample:
-	go build example.go
+	go build -o bin/example example.go

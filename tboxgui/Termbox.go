@@ -3,7 +3,6 @@ package tboxgui
 import (
 	"container/list"
 	"github.com/nsf/termbox-go"
-	"strings"
 )
 
 const (
@@ -67,26 +66,33 @@ type Cursor struct {
 }
 
 // Draw function for the cursor
-func (c Cursor) Draw() {
+func (c *Cursor) Draw() {
 	termbox.SetCursor(c.x, c.y)
 }
 
 type Control struct {
-	x          int // Starting X Position
-	y          int // Starting Y Position
-	width      int // Width of the Control
-	height     int // Height of the Control
-	max_height int // The max height (defaults to height)
-	max_width  int // The max width (defaults to width)
+	name       string // The name of the control
+	x          int    // Starting X Position
+	y          int    // Starting Y Position
+	width      int    // Width of the Control
+	height     int    // Height of the Control
+	max_height int    // The max height (defaults to height)
+	max_width  int    // The max width (defaults to width)
+	snap       int    // How the control will snap (LEFT RIGHT CENTER)
 }
 
 // Draw the control
-func (c Control) Draw() {
+func (c *Control) Draw() {
+}
+
+func (c *Control) GetName() string {
+	return c.name
 }
 
 // Make a new control with these parameters
-func NewControl(x, y, max_height, max_width int) *Control {
+func NewControl(name string, x, y, max_height, max_width int) *Control {
 	c := Control{}
+	c.name = name
 	c.x = x
 	c.y = y
 	c.max_height = max_height
@@ -106,7 +112,7 @@ type Button struct {
 }
 
 // Draw the button
-func (b Button) Draw() {
+func (b *Button) Draw() {
 	if b.selected {
 		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorBlack, termbox.ColorGreen)
 	} else {
@@ -115,13 +121,16 @@ func (b Button) Draw() {
 }
 
 // Make a new buton
-func NewButton(text string, x, y, max_height, max_width int) *Button {
+func NewButton(name, text string, x, y, max_height, max_width int) *Button {
 	b := Button{}
-	b.control = NewControl(x, y, max_height, max_width)
+	b.control = NewControl(name, x, y, max_height, max_width)
 	b.selected = false
 	return &b
 }
 
+func (b *Button) GetName() string {
+	return b.control.name
+}
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
@@ -131,9 +140,9 @@ type ScrollingTextArea struct {
 	wrap    bool
 }
 
-func NewScrollingTextArea(x, y, height, width, maxlines int) *ScrollingTextArea {
+func NewScrollingTextArea(name string, x, y, height, width, maxlines int) *ScrollingTextArea {
 	scr := ScrollingTextArea{
-		NewControl(x, y, height, width),
+		NewControl(name, x, y, height, width),
 		make([]string, maxlines),
 		0,
 		0,
@@ -150,8 +159,12 @@ func (scr *ScrollingTextArea) Draw() {
 	}
 }
 
+func (scr *ScrollingTextArea) GetName() string {
+	return scr.control.name
+}
+
 func (scr *ScrollingTextArea) MoveUp() {
-	if scr.numStr - scr.offset > scr.control.height  {
+	if scr.numStr-scr.offset > scr.control.height {
 		scr.offset++
 	}
 }
@@ -186,7 +199,7 @@ type TextBox struct {
 }
 
 // Draw the textbox
-func (t TextBox) Draw() {
+func (t *TextBox) Draw() {
 	if len(t.text) < t.control.max_width {
 		if t.Masked {
 			WriteMasked(t.control.x, t.control.y, len(t.text))
@@ -207,9 +220,9 @@ func (t TextBox) Draw() {
 }
 
 // Creates a new textbox
-func NewTextBox(x, y, max_width int) *TextBox {
+func NewTextBox(name string, x, y, max_width int) *TextBox {
 	t := TextBox{
-		NewControl(x, y, 1, max_width),
+		NewControl(name, x, y, 1, max_width),
 		false,
 		false,
 		Cursor{x, y},
@@ -218,287 +231,313 @@ func NewTextBox(x, y, max_width int) *TextBox {
 	return &t
 }
 
-		func (t *TextBox) OnKeyEvent(e termbox.Event) {
-			if e.Key == termbox.KeyArrowLeft {
-				if t.position > 0 {
-					t.position -= 1
-				}
-			} else if e.Key == termbox.KeyArrowRight {
-				if t.position < len(t.text) {
-					t.position += 1
-				}
-			} else if e.Key == termbox.KeyBackspace || e.Key == termbox.KeyBackspace2 {
-				if len(t.text) > 0 && t.position > 0 {
-					if t.position == len(t.text) {
-						t.text = t.text[0 : t.position-1]
-					} else {
-						t.text = t.text[0:t.position-1] + t.text[t.position:len(t.text)]
-					}
-					t.position -= 1
-				}
-			} else if e.Key == termbox.KeyDelete {
-				if len(t.text) > 0 && t.position < len(t.text) {
-					t.text = t.text[0:t.position] + t.text[t.position+1:len(t.text)]
-					//t.position -= 1
-				}
-			} else if e.Ch != 0 {
-				t.text = t.text[0:t.position] + string(e.Ch) + t.text[t.position:len(t.text)]
-				t.position += 1
-			}
-			t.cursor.x = t.control.x + t.position
+// OnKeyEvent for Textboxes
+func (t *TextBox) OnKeyEvent(e termbox.Event) {
+	if e.Key == termbox.KeyArrowLeft {
+		if t.position > 0 {
+			t.position -= 1
 		}
+	} else if e.Key == termbox.KeyArrowRight {
+		if t.position < len(t.text) {
+			t.position += 1
+		}
+	} else if e.Key == termbox.KeyBackspace || e.Key == termbox.KeyBackspace2 {
+		if len(t.text) > 0 && t.position > 0 {
+			if t.position == len(t.text) {
+				t.text = t.text[0 : t.position-1]
+			} else {
+				t.text = t.text[0:t.position-1] + t.text[t.position:len(t.text)]
+			}
+			t.position -= 1
+		}
+	} else if e.Key == termbox.KeyDelete {
+		if len(t.text) > 0 && t.position < len(t.text) {
+			t.text = t.text[0:t.position] + t.text[t.position+1:len(t.text)]
+			//t.position -= 1
+		}
+	} else if e.Ch != 0 {
+		t.text = t.text[0:t.position] + string(e.Ch) + t.text[t.position:len(t.text)]
+		t.position += 1
+	}
+	t.cursor.x = t.control.x + t.position
+}
 
-		// A panel
-		type Panel struct {
+// A panel
+type Panel struct {
 	control  *Control
 	HPercent int
 	VPercent int
-	Layout   int        // 1 Horizontal 2 Vertical
-	objects  *list.List // Drawable
+	Layout   int // 1 Horizontal 2 Vertical
+	objects  map[string]Drawable
+}
 
-			OnKeyEvent func(termbox.Event)
-		}
+// Make a new panel
+func NewPanel(name string, x, y, HPercent, VPercent, Layout int) *Panel {
+	c := NewControl(name, x, y, 0, 0)
+	p := Panel{c,
+		HPercent,
+		VPercent,
+		Layout,
+		make(map[string]Drawable)}
+	return &p
+}
 
-		// Draw the Panel
-		func (p Panel) Draw() {
-	var d Drawable
-	for object := p.objects.Front(); object != nil; object = object.Next() {
-		d = object.Value.(Drawable)
-		d.Draw()
-			}
-		}
+// Draw the Panel
+func (p *Panel) Draw() {
+	for _, object := range p.objects {
+		object.Draw()
+	}
+}
 
-		func (p Panel) Resize() {
+// Get the name
+func (p *Panel) GetName() string {
+	return p.control.name
+}
+
+// Resize
+func (p *Panel) Resize() {
 	if p.Layout == Horizontal {
 
 	} else if p.Layout == Vertical {
 
-			}
-		}
-
-func (p Panel) AddObject(d Drawable) {
-	p.objects.PushBack(d)
+	}
 }
 
-func (p Panel) RemoveObject(d Drawable) {
+// Add an object
+func (p *Panel) AddObject(d Drawable) {
+	if _, exists := p.objects[d.GetName()]; !exists {
+		p.objects[d.GetName()] = d
+	} else {
+		// Object exists...
+}
 
 }
-		type ScrollPanel struct {
-			panel     *Panel
-			max_index int
-			min_index int
-			cur_index int
 
-			OnKeyEvent func(termbox.Event)
-		}
+// Remove an object
+func (p *Panel) RemoveDrawable(d Drawable) {
+	delete(p.objects, d.GetName())
+}
 
-		// Draw the ScrollPanel
-		func (s ScrollPanel) Draw() {
+// Remove an object
+func (p *Panel) RemoveName(d string) {
+	delete(p.objects, d)
+}
 
-		}
+type ScrollPanel struct {
+	panel     *Panel
+	max_index int
+	min_index int
+	cur_index int
 
-		type Window struct {
+	OnKeyEvent func(termbox.Event)
+}
+
+// Draw the ScrollPanel
+func (s *ScrollPanel) Draw() {
+
+}
+
+func (s *ScrollPanel) GetName() string {
+	return s.panel.control.name
+}
+type Window struct {
 	name    string
 	objects *list.List // Drawable
 
-			OnKeyEvent func(termbox.Event)
-		}
+	OnKeyEvent func(termbox.Event)
+}
 
-		func (w Window) Draw() {
+func (w *Window) Draw() {
 	var d Drawable
 	for object := w.objects.Front(); object != nil; object = object.Next() {
 		d = object.Value.(Drawable)
 		d.Draw()
-			}
+	}
+}
+
+type TermboxEventHandler struct {
+	KeyEvents map[termbox.Key]func(termbox.Event)
+	OnResize  func(termbox.Event)
+	OnError   func(termbox.Event)
+	OnDefault func(termbox.Event)
+}
+
+func NewTermboxEventHandler() *TermboxEventHandler {
+	teh := TermboxEventHandler{}
+	teh.KeyEvents = make(map[termbox.Key]func(termbox.Event))
+	return &teh
+}
+
+func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
+	switch event.Type {
+	case termbox.EventKey:
+		if functions.KeyEvents[event.Key] != nil {
+			functions.KeyEvents[event.Key](event)
+		} else {
+			functions.OnDefault(event)
 		}
-
-		type TermboxEventHandler struct {
-			KeyEvents map[termbox.Key]func(termbox.Event)
-			OnResize  func(termbox.Event)
-			OnError   func(termbox.Event)
-			OnDefault func(termbox.Event)
+	case termbox.EventResize:
+		if functions.OnResize != nil {
+			functions.OnResize(event)
 		}
-
-		func NewTermboxEventHandler() *TermboxEventHandler {
-			teh := TermboxEventHandler{}
-			teh.KeyEvents = make(map[termbox.Key]func(termbox.Event))
-			return &teh
+	case termbox.EventError:
+		if functions.OnError != nil {
+			functions.OnError(event)
 		}
+	}
+}
 
-		func TermboxSwitch(event termbox.Event, functions *TermboxEventHandler) {
-			switch event.Type {
-			case termbox.EventKey:
-				if functions.KeyEvents[event.Key] != nil {
-					functions.KeyEvents[event.Key](event)
-				} else {
-					functions.OnDefault(event)
-				}
-			case termbox.EventResize:
-				if functions.OnResize != nil {
-					functions.OnResize(event)
-				}
-			case termbox.EventError:
-				if functions.OnError != nil {
-					functions.OnError(event)
-				}
-			}
+//
+//    [ text ]
+//
+func DrawButton(text string, selected bool, x int, y int) {
+	button := "[ " + text + " ]"
+	if selected {
+		WriteColor(x, y, button, termbox.ColorGreen, termbox.ColorBlack)
+	} else {
+		WriteColor(x, y, button, termbox.ColorBlack, termbox.ColorGreen)
+	}
+}
+
+// Fills from x,y to x+width horizontally
+func FillH(filler string, x int, y int, width int) {
+	for c := x; c < width; c++ {
+		write_us(c, y, filler)
+	}
+}
+
+// Gets lines of a string, by a max length 
+func GetLines(message string, length int) []string {
+	lines := []string{}
+
+	for counter := 0; counter < len(message); {
+		start := counter
+		end := start + length
+		if end > len(message) {
+			end = len(message)
 		}
+		lines = append(lines, message[start:end])
+		counter += length
+	}
+	return lines
+}
 
-		//
-		//    [ text ]
-		//
-		func DrawButton(text string, selected bool, x int, y int) {
-			button := "[ " + text + " ]"
-			if selected {
-				WriteColor(x, y, button, termbox.ColorGreen, termbox.ColorBlack)
-			} else {
-				WriteColor(x, y, button, termbox.ColorBlack, termbox.ColorGreen)
-			}
-		}
+// Clears the screen with the default colors
+func Clear() {
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+}
 
-		// Fills from x,y to x+width horizontally
-		func FillH(filler string, x int, y int, width int) {
-			for c := x; c < width; c++ {
-				write_us(c, y, filler)
-			}
-		}
+// Flushes to the screen
+func Flush() {
+	termbox.Flush()
+}
 
-		// Gets lines of a string, by a max length 
-		func GetLines(message string, length int) []string {
-			lines := []string{}
+// Inits the termbox window
+func Init() {
+	termbox.Init()
+}
 
-			for counter := 0; counter < len(message); {
-				start := counter
-				end := start + length
-				if end > len(message) {
-					end = len(message)
-				}
-				lines = append(lines, message[start:end])
-				counter += length
-			}
-			return lines
-		}
+// Cleans up the termbox screen
+func Cleanup() {
+	termbox.Close()
+}
 
-		// Fits a string into lines by ch 
-		func fitToLines(message string, max_line_len int) *list.List {
-			lines := list.New()
-			slices := strings.SplitAfter(message, " ")
-			line := ""
-			for _, s := range slices {
-				if (len(line) + len(s)) > max_line_len {
-					lines.PushBack(line)
-					line = ""
-				} else {
-					line += s
-				}
-			}
-			return lines
-		}
+// Write(x int, y int, mess string)
+// Writes a string to the buffer with the 
+// default attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
+func Write(x int, y int, mess string) {
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
+	}
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
+		x++
+	}
+}
 
-		func write_wrap_ch(x int, y int, mess string) {
-			sx, _ := termbox.Size()
-			width := sx - x
-			lines := (int)(len(mess) / (width))
-			lines += 1
-			for i := 0; i < lines; i++ {
-				start := width * i
-				end := width * (i + 1)
-				if end > len(mess[start:len(mess)]) {
-					end = len(mess[start:len(mess)])
-				}
-				Write(x, y+i, mess[start:end])
-			}
-		}
+// WriteMasked(x, y, length int)
+// Writes * to the screen for length 
+// x      The x starting position
+// y      The y starting position
+// len	  The length of the mask
+func WriteMasked(x, y, length int) {
+	sx, _ := termbox.Size()
+	if length+x > sx {
+		length = (length - ((length + x) - sx) - 1)
+	}
 
-		//Writes to the center of the screen
-		func WriteCenter(y int, mess string) {
-			x, _ := termbox.Size()
-			write_us(((x / 2) - (len(mess) / 2)), y, mess)
-		}
+	for i := 0; i < length; i += 1 {
+		termbox.SetCell(x+i, y, '*', termbox.ColorDefault, termbox.ColorDefault)
+	}
+}
 
-		//Write lines to the center of the screen
-		func WriteCenterWrap(start_y int, lines []string) {
-			for i, line := range lines {
-				WriteCenter(start_y+i, line)
-			}
-		}
-
-		// Display text on the screen starting at x,y
-		// Assumes that you are not going to go outside of bounds
-		func write_us(x int, y int, mess string) {
-			for _, c := range mess {
-				termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
-				x++
-			}
-		}
-
-		// Write(x int, y int, mess string)
-		// Writes a string to the buffer with the 
-		// default attributes safely cutting off the end
-		// x      The x starting position
-		// y      The y starting position
-		// mess   The string to display
-		func Write(x int, y int, mess string) {
-			sx, _ := termbox.Size()
-			if x+len(mess) > sx {
-				mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
-			}
-			for _, c := range mess {
-				termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
-				x++
-			}
-		}
-
-		func WriteMasked(x, y, length int) {
-			sx, _ := termbox.Size()
-			if length+x > sx {
-				length = (length - ((length + x) - sx) - 1)
-			}
-
-			for i := 0; i < length; i += 1 {
-				termbox.SetCell(x+i, y, '*', termbox.ColorDefault, termbox.ColorDefault)
-			}
-		}
-
-		// Write(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute)
-		// Writes a string to the buffer with the 
-		// specified attributes safely cutting off the end
-		// x      The x starting position
-		// y      The y starting position
-		// mess   The string to display
-		// fb     The foreground color
-		// bg     The background color
+// Write(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute)
+// Writes a string to the buffer with the 
+// specified attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
+// fb     The foreground color
+// bg     The background color
 func WriteColor(x, y int, mess string, fb, bg termbox.Attribute) {
-			sx, _ := termbox.Size()
-			if x+len(mess) > sx {
-				mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
-			}
-			for _, c := range mess {
-				termbox.SetCell(x, y, c, fb, bg)
-				x++
-			}
-		}
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
+	}
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, fb, bg)
+		x++
+	}
+}
 
-		// Display a message in the center of the screen.
-		func MessageUs(mess string) {
-			_, y := termbox.Size()
-			WriteCenter(y/2, mess)
-		}
+// ***************
+// * DEPRECIATED *
+// ***************
+// These functions will be removed, do not use them
 
-		// Clears the screen
-		func Clear() {
-			termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+func write_wrap_ch(x int, y int, mess string) {
+	sx, _ := termbox.Size()
+	width := sx - x
+	lines := (int)(len(mess) / (width))
+	lines += 1
+	for i := 0; i < lines; i++ {
+		start := width * i
+		end := width * (i + 1)
+		if end > len(mess[start:len(mess)]) {
+			end = len(mess[start:len(mess)])
 		}
+		Write(x, y+i, mess[start:end])
+	}
+}
 
-		//Flushes to the screen
-		func Flush() {
-			termbox.Flush()
-		}
+//Writes to the center of the screen
+func WriteCenter(y int, mess string) {
+	x, _ := termbox.Size()
+	write_us(((x / 2) - (len(mess) / 2)), y, mess)
+}
 
-		func Init() {
-			termbox.Init()
-		}
+//Write lines to the center of the screen
+func WriteCenterWrap(start_y int, lines []string) {
+	for i, line := range lines {
+		WriteCenter(start_y+i, line)
+	}
+}
 
-		func Cleanup() {
-			termbox.Close()
-		}
+// Display text on the screen starting at x,y
+// Assumes that you are not going to go outside of bounds
+func write_us(x int, y int, mess string) {
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
+		x++
+	}
+}
+
+// Display a message in the center of the screen.
+func MessageUs(mess string) {
+	_, y := termbox.Size()
+	WriteCenter(y/2, mess)
+}
