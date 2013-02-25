@@ -23,6 +23,7 @@ const (
 // Any object that is drawable
 type Drawable interface {
 	Draw()
+	GetName() string
 }
 
 type DrawableList struct {
@@ -80,27 +81,33 @@ type Cursor struct {
 }
 
 // Draw function for the cursor
-func (c Cursor) Draw() {
+func (c *Cursor) Draw() {
 	termbox.SetCursor(c.x, c.y)
 }
 
 type Control struct {
-	x          int // Starting X Position
-	y          int // Starting Y Position
-	width      int // Width of the Control
-	height     int // Height of the Control
-	max_height int // The max height (defaults to height)
-	max_width  int // The max width (defaults to width)
-	snap       int // How the control will snap (LEFT RIGHT CENTER)
+	name       string // The name of the control
+	x          int    // Starting X Position
+	y          int    // Starting Y Position
+	width      int    // Width of the Control
+	height     int    // Height of the Control
+	max_height int    // The max height (defaults to height)
+	max_width  int    // The max width (defaults to width)
+	snap       int    // How the control will snap (LEFT RIGHT CENTER)
 }
 
 // Draw the control
-func (c Control) Draw() {
+func (c *Control) Draw() {
+}
+
+func (c *Control) GetName() string {
+	return c.name
 }
 
 // Make a new control with these parameters
-func NewControl(x, y, max_height, max_width int) *Control {
+func NewControl(name string, x, y, max_height, max_width int) *Control {
 	c := Control{}
+	c.name = name
 	c.x = x
 	c.y = y
 	c.max_height = max_height
@@ -120,7 +127,7 @@ type Button struct {
 }
 
 // Draw the button
-func (b Button) Draw() {
+func (b *Button) Draw() {
 	if b.selected {
 		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorBlack, termbox.ColorGreen)
 	} else {
@@ -129,11 +136,15 @@ func (b Button) Draw() {
 }
 
 // Make a new buton
-func NewButton(text string, x, y, max_height, max_width int) *Button {
+func NewButton(name, text string, x, y, max_height, max_width int) *Button {
 	b := Button{}
-	b.control = NewControl(x, y, max_height, max_width)
+	b.control = NewControl(name, x, y, max_height, max_width)
 	b.selected = false
 	return &b
+}
+
+func (b *Button) GetName() string {
+	return b.control.name
 }
 
 //Provides an area for scrolling text
@@ -145,9 +156,9 @@ type ScrollingTextArea struct {
 	wrap    bool
 }
 
-func NewScrollingTextArea(x, y, height, width, maxlines int) *ScrollingTextArea {
+func NewScrollingTextArea(name string, x, y, height, width, maxlines int) *ScrollingTextArea {
 	scr := ScrollingTextArea{
-		NewControl(x, y, height, width),
+		NewControl(name, x, y, height, width),
 		make([]string, maxlines),
 		0,
 		0,
@@ -162,6 +173,10 @@ func (scr *ScrollingTextArea) Draw() {
 		str := scr.Text[scr.offset+i][:scr.control.width]
 		Write(scr.control.x, scr.control.y+i, str)
 	}
+}
+
+func (scr *ScrollingTextArea) GetName() string {
+	return scr.control.name
 }
 
 func (scr *ScrollingTextArea) AddLine(text string) {
@@ -198,7 +213,7 @@ type TextBox struct {
 }
 
 // Draw the textbox
-func (t TextBox) Draw() {
+func (t *TextBox) Draw() {
 	if len(t.text) < t.control.max_width {
 		if t.Masked {
 			WriteMasked(t.control.x, t.control.y, len(t.text))
@@ -219,9 +234,9 @@ func (t TextBox) Draw() {
 }
 
 // Creates a new textbox
-func NewTextBox(x, y, max_width int) *TextBox {
+func NewTextBox(name string, x, y, max_width int) *TextBox {
 	t := TextBox{
-		NewControl(x, y, 1, max_width),
+		NewControl(name, x, y, 1, max_width),
 		false,
 		false,
 		Cursor{x, y},
@@ -266,28 +281,33 @@ type Panel struct {
 	HPercent int
 	VPercent int
 	Layout   int // 1 Horizontal 2 Vertical
-	objects  *DrawableList
+	objects  map[string]Drawable
 }
 
-func NewPanel(x, y, HPercent, VPercent, Layout int) *Panel {
-	c := NewControl(x, y, 0, 0)
+func NewPanel(name string, x, y, HPercent, VPercent, Layout int) *Panel {
+	c := NewControl(name, x, y, 0, 0)
 	p := Panel{c,
 		HPercent,
 		VPercent,
 		Layout,
-		NewDrawableList()}
+		make(map[string]Drawable)}
 	return &p
 }
 
 // Draw the Panel
-func (p Panel) Draw() {
-
-	for i := 0; i < p.objects.count; i++ {
-		p.objects.ItemAt(i).Draw()
-	}
+func (p *Panel) Draw() {
+	/*
+		for i := 0; i < p.objects.count; i++ {
+			p.objects.ItemAt(i).Draw()
+		}
+	*/
 }
 
-func (p Panel) Resize() {
+func (p *Panel) GetName() string {
+	return p.control.name
+}
+
+func (p *Panel) Resize() {
 	if p.Layout == Horizontal {
 
 	} else if p.Layout == Vertical {
@@ -295,12 +315,17 @@ func (p Panel) Resize() {
 	}
 }
 
-func (p Panel) AddObject(d Drawable) {
-	p.objects.Add(d)
+func (p *Panel) AddObject(d Drawable) {
+	if _, exists := p.objects[d.GetName()]; !exists {
+		p.objects[d.GetName()] = d
+	} else {
+		// Object exists...
+	}
+
 }
 
-func (p Panel) RemoveObject(d Drawable) {
-	p.objects.Remove(d)
+func (p *Panel) RemoveObject(d Drawable) {
+	delete(p.objects, d.GetName())
 }
 
 type ScrollPanel struct {
@@ -313,8 +338,12 @@ type ScrollPanel struct {
 }
 
 // Draw the ScrollPanel
-func (s ScrollPanel) Draw() {
+func (s *ScrollPanel) Draw() {
 
+}
+
+func (s *ScrollPanel) GetName() string {
+	return s.panel.control.name
 }
 
 type Window struct {
@@ -324,7 +353,7 @@ type Window struct {
 	OnKeyEvent func(termbox.Event)
 }
 
-func (w Window) Draw() {
+func (w *Window) Draw() {
 	var d Drawable
 	for object := w.objects.Front(); object != nil; object = object.Next() {
 		d = object.Value.(Drawable)

@@ -27,7 +27,7 @@ func testLayout() {
 			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
 				quit = true
 			} else {
-				
+
 			}
 		}
 	}
@@ -36,7 +36,7 @@ func testLayout() {
 func testScrollTextArea() {
 	quit := false
 	termboxEvent := make(chan termbox.Event)
-	stb := tboxgui.NewScrollingTextArea(1, 1, 10, 20, 200)
+	stb := tboxgui.NewScrollingTextArea("TestScrollingTextArea", 1, 1, 10, 20, 200)
 	stb.AddLine("Hello")
 	stb.AddLine("Line")
 	stb.AddLine("after")
