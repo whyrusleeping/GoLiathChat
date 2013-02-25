@@ -145,8 +145,8 @@ func (scr *ScrollingTextArea) Draw() {
 	//Tenative draw function
 	for i := 0; i < scr.control.height && i < scr.numStr; i++ {
 		//No wrap
-		str := scr.Text[scr.numStr - (1 + scr.offset + i)]
-		Write(scr.control.x, (scr.control.y + scr.control.height) - i, str)
+		str := scr.Text[scr.numStr-(1+scr.offset+i)]
+		Write(scr.control.x, (scr.control.y+scr.control.height)-i, str)
 	}
 }
 
