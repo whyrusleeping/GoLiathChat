@@ -18,14 +18,21 @@ func testLayout() {
 	quit := false
 	termboxEvent := make(chan termbox.Event)
 
+	// Start the goroutines
+	go termboxEventPoller(termboxEvent)
+
 	for !quit {
 		tboxgui.Clear()
+		_, sy := termbox.Size()
+		tboxgui.Write(0, sy-1, "Panel Test")
 		tboxgui.Flush()
 
 		select {
 		case event := <-termboxEvent:
 			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
 				quit = true
+			} else if event.Type == termbox.EventResize {
+				//Resize
 			} else {
 
 			}

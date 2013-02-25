@@ -27,8 +27,8 @@ func NewDrawableList() *DrawableList {
 
 func (dl *DrawableList) Add(d Drawable) {
 	if dl.count >= len(dl.l) {
-		nl := make([]Drawable, len(dl.l) * 2)
-		copy(nl,dl.l)
+		nl := make([]Drawable, len(dl.l)*2)
+		copy(nl, dl.l)
 		dl.l = nl
 	}
 	dl.l[dl.count] = d
@@ -46,7 +46,7 @@ func (dl *DrawableList) Remove(d Drawable) {
 
 func (dl *DrawableList) RemoveAt(i int) {
 	//TODO: bounds checks!
-	for ; i < dl.count - 1; i++ {
+	for ; i < dl.count-1; i++ {
 		dl.l[i] = dl.l[i+1]
 	}
 	dl.l[i] = nil
@@ -132,6 +132,7 @@ func NewButton(name, text string, x, y, max_height, max_width int) *Button {
 func (b *Button) GetName() string {
 	return b.control.name
 }
+
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
@@ -310,8 +311,7 @@ func (p *Panel) AddObject(d Drawable) {
 		p.objects[d.GetName()] = d
 	} else {
 		// Object exists...
-}
-
+	}
 }
 
 // Remove an object
@@ -341,6 +341,7 @@ func (s *ScrollPanel) Draw() {
 func (s *ScrollPanel) GetName() string {
 	return s.panel.control.name
 }
+
 type Window struct {
 	name    string
 	objects *list.List // Drawable
