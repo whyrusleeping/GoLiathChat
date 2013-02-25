@@ -13,6 +13,7 @@ const (
 // Any object that is drawable
 type Drawable interface {
 	Draw()
+	GetName() string
 }
 
 type DrawableList struct {
