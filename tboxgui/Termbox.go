@@ -3,7 +3,6 @@ package tboxgui
 import (
 	"container/list"
 	"github.com/nsf/termbox-go"
-	"strings"
 )
 
 // Layout orentations
@@ -245,6 +244,7 @@ func NewTextBox(name string, x, y, max_width int) *TextBox {
 	return &t
 }
 
+// OnKeyEvent for Textboxes
 func (t *TextBox) OnKeyEvent(e termbox.Event) {
 	if e.Key == termbox.KeyArrowLeft {
 		if t.position > 0 {
@@ -284,6 +284,7 @@ type Panel struct {
 	objects  map[string]Drawable
 }
 
+// Make a new panel
 func NewPanel(name string, x, y, HPercent, VPercent, Layout int) *Panel {
 	c := NewControl(name, x, y, 0, 0)
 	p := Panel{c,
@@ -296,17 +297,17 @@ func NewPanel(name string, x, y, HPercent, VPercent, Layout int) *Panel {
 
 // Draw the Panel
 func (p *Panel) Draw() {
-	/*
-		for i := 0; i < p.objects.count; i++ {
-			p.objects.ItemAt(i).Draw()
-		}
-	*/
+	for _, object := range p.objects {
+		object.Draw()
+	}
 }
 
+// Get the name
 func (p *Panel) GetName() string {
 	return p.control.name
 }
 
+// Resize
 func (p *Panel) Resize() {
 	if p.Layout == Horizontal {
 
@@ -315,6 +316,7 @@ func (p *Panel) Resize() {
 	}
 }
 
+// Add an object
 func (p *Panel) AddObject(d Drawable) {
 	if _, exists := p.objects[d.GetName()]; !exists {
 		p.objects[d.GetName()] = d
@@ -324,8 +326,14 @@ func (p *Panel) AddObject(d Drawable) {
 
 }
 
-func (p *Panel) RemoveObject(d Drawable) {
+// Remove an object
+func (p *Panel) RemoveDrawable(d Drawable) {
 	delete(p.objects, d.GetName())
+}
+
+// Remove an object
+func (p *Panel) RemoveName(d string) {
+	delete(p.objects, d)
 }
 
 type ScrollPanel struct {
@@ -428,21 +436,82 @@ func GetLines(message string, length int) []string {
 	return lines
 }
 
-// Fits a string into lines by ch 
-func fitToLines(message string, max_line_len int) *list.List {
-	lines := list.New()
-	slices := strings.SplitAfter(message, " ")
-	line := ""
-	for _, s := range slices {
-		if (len(line) + len(s)) > max_line_len {
-			lines.PushBack(line)
-			line = ""
-		} else {
-			line += s
-		}
-	}
-	return lines
+// Clears the screen with the default colors
+func Clear() {
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
+
+// Flushes to the screen
+func Flush() {
+	termbox.Flush()
+}
+
+// Inits the termbox window
+func Init() {
+	termbox.Init()
+}
+
+// Cleans up the termbox screen
+func Cleanup() {
+	termbox.Close()
+}
+
+// Write(x int, y int, mess string)
+// Writes a string to the buffer with the 
+// default attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
+func Write(x int, y int, mess string) {
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
+	}
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
+		x++
+	}
+}
+
+// WriteMasked(x, y, length int)
+// Writes * to the screen for length 
+// x      The x starting position
+// y      The y starting position
+// len	  The length of the mask
+func WriteMasked(x, y, length int) {
+	sx, _ := termbox.Size()
+	if length+x > sx {
+		length = (length - ((length + x) - sx) - 1)
+	}
+
+	for i := 0; i < length; i += 1 {
+		termbox.SetCell(x+i, y, '*', termbox.ColorDefault, termbox.ColorDefault)
+	}
+}
+
+// Write(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute)
+// Writes a string to the buffer with the 
+// specified attributes safely cutting off the end
+// x      The x starting position
+// y      The y starting position
+// mess   The string to display
+// fb     The foreground color
+// bg     The background color
+func WriteColor(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute) {
+	sx, _ := termbox.Size()
+	if x+len(mess) > sx {
+		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
+	}
+	for _, c := range mess {
+		termbox.SetCell(x, y, c, fb, bg)
+		x++
+	}
+}
+
+// ***************
+// * DEPRECIATED *
+// ***************
+// These functions will be removed, do not use them
 
 func write_wrap_ch(x int, y int, mess string) {
 	sx, _ := termbox.Size()
@@ -481,73 +550,8 @@ func write_us(x int, y int, mess string) {
 	}
 }
 
-// Write(x int, y int, mess string)
-// Writes a string to the buffer with the 
-// default attributes safely cutting off the end
-// x      The x starting position
-// y      The y starting position
-// mess   The string to display
-func Write(x int, y int, mess string) {
-	sx, _ := termbox.Size()
-	if x+len(mess) > sx {
-		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
-	}
-	for _, c := range mess {
-		termbox.SetCell(x, y, c, termbox.ColorDefault, termbox.ColorDefault)
-		x++
-	}
-}
-
-func WriteMasked(x, y, length int) {
-	sx, _ := termbox.Size()
-	if length+x > sx {
-		length = (length - ((length + x) - sx) - 1)
-	}
-
-	for i := 0; i < length; i += 1 {
-		termbox.SetCell(x+i, y, '*', termbox.ColorDefault, termbox.ColorDefault)
-	}
-}
-
-// Write(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute)
-// Writes a string to the buffer with the 
-// specified attributes safely cutting off the end
-// x      The x starting position
-// y      The y starting position
-// mess   The string to display
-// fb     The foreground color
-// bg     The background color
-func WriteColor(x int, y int, mess string, fb termbox.Attribute, bg termbox.Attribute) {
-	sx, _ := termbox.Size()
-	if x+len(mess) > sx {
-		mess = mess[:(x+len(mess))-((x+len(mess))-sx)-1]
-	}
-	for _, c := range mess {
-		termbox.SetCell(x, y, c, fb, bg)
-		x++
-	}
-}
-
 // Display a message in the center of the screen.
 func MessageUs(mess string) {
 	_, y := termbox.Size()
 	WriteCenter(y/2, mess)
-}
-
-// Clears the screen
-func Clear() {
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-}
-
-//Flushes to the screen
-func Flush() {
-	termbox.Flush()
-}
-
-func Init() {
-	termbox.Init()
-}
-
-func Cleanup() {
-	termbox.Close()
 }
