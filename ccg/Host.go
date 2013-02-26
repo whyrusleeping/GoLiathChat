@@ -18,6 +18,7 @@ const (
 
 //Usage is simple, read messages from the Reader, and write to the Writer.
 type Host struct {
+	username	   string
 	conn           net.Conn
 	Writer, Reader chan Packet
 	cert           tls.Certificate
@@ -65,7 +66,7 @@ func (h *Host) Send(message string) {
 	if message[0] == '/' {
 		mtype = TCommand
 	}
-	pack := NewPacket(mtype, []byte(message))
+	pack := NewPacket(mtype, "", []byte(message))
 	h.Writer <- pack
 }
 
@@ -100,8 +101,7 @@ func (h *Host) writeMessages() {
 				} else {
 					txt = "No files available!"
 				}
-				rp := NewPacket(TMessage, []byte(txt))
-				rp.Username = "Notice"
+				rp := NewPacket(TMessage, "Notice", []byte(txt))
 				h.Reader <- rp
 			case "accept":
 				break
@@ -109,7 +109,7 @@ func (h *Host) writeMessages() {
 				break
 			default:
 				go func() {
-					h.Reader <- NewPacket(TMessage, []byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
+					h.Reader <- NewPacket(TMessage, "Notice",[]byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
 				}()
 			}
 		}
@@ -128,9 +128,9 @@ func (h *Host) SendFile(path string) error {
 		return err
 	}
 	h.filesLocal[path] = fi
-	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
+	h.Writer <- NewPacket(TFileInfo, "", fi.getInfo())
 	for i := 0; i < len(fi.data); i++ {
-		h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
+		h.Writer <- NewPacket(TFile, "", fi.getBytesForBlock(i))
 		//Wait two milliseconds between sendings
 		time.Sleep(time.Millisecond * 2)
 	}
@@ -161,8 +161,7 @@ func (h *Host) readMessages() {
 			h.filesLocal[fname].data[bid] = blck
 			if h.filesLocal[fname].IsComplete() {
 				h.filesLocal[fname].Save()
-				p = NewPacket(1,[]byte(fmt.Sprintf("%s download complete!",fname)))
-				p.Username = "Notice"
+				p = NewPacket(1,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
 				h.Reader <- p
 			}
 		case TServerInfo:
@@ -178,6 +177,12 @@ func (h *Host) readMessages() {
 			for i := 0; i < nFiles; i++ {
 				h.filesAvailable[i],_ = ReadShortString(buf)
 			}
+		case TPeerInfo:
+			//attempt to make a connection to the peer
+			//This may require NAT traversal and other ugly things.. bleh
+
+			//For now, just attempt a TCP connection
+
 		default:
 			h.Reader <- p
 		}
@@ -203,7 +208,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)
 	h.conn.Write([]byte(handle))
-
+	h.username = handle
 	//Read the servers challenge
 	sc := make([]byte, 32)
 	h.conn.Read(sc)
@@ -239,4 +244,8 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	h.conn.Write(loginByte)
 
 	return true, "Authenticated"
+}
+
+func (h *Host) RequestPeerToPeer(username string) {
+	h.conn.Write(NewPacket(TPeerRequest,h.username,[]byte(username)).GetBytes())
 }

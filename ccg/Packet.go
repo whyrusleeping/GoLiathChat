@@ -19,6 +19,8 @@ const (
 	TServerInfo
 	THistory
 	TAccept
+	TPeerRequest
+	TPeerInfo
 )
 
 type Packet struct {
@@ -70,7 +72,8 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	return p, nil
 }
 
-func NewPacket(mtype byte, Payload []byte) Packet {
+//Creates a new simple packet
+func NewPacket(mtype byte, username string, Payload []byte) Packet {
 	p := Packet{}
 	p.Typ = mtype
 	p.Timestamp = int32(time.Now().Unix())
