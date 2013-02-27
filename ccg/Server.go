@@ -170,6 +170,7 @@ func (s *Server) Listen() {
 //Handles all incoming user commands
 func (s *Server) command(p Packet) {
 	args := strings.Split(string(p.Payload[1:]), " ")
+
 	switch args[0] {
 	case "accept":
 		if len(args) < 2 {
@@ -210,6 +211,7 @@ func (s *Server) MessageHandler() {
 			s.parse <- p
 		case TRegister:
 			s.regReqs[p.Username] = p.Payload
+			log.Printf("sending out reg request for %s\n",p.Username)
 			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
 			s.parse <- p
 		case TCommand:
