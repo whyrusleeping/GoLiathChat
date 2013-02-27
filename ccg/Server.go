@@ -52,7 +52,7 @@ func StartServer() *Server {
 	}
 	config := tls.Config{Certificates: []tls.Certificate{cert}}
 	config.Rand = rand.Reader
-	service := "127.0.0.1:10234"
+	service := ":10234"
 	listener, err := tls.Listen("tcp", service, &config)
 	s.listener = listener
 	if err != nil {

@@ -167,7 +167,7 @@ func (h *Host) readMessages() {
 			h.filesLocal[fname].data[bid] = blck
 			if h.filesLocal[fname].IsComplete() {
 				h.filesLocal[fname].Save()
-				p = NewPacket(1,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
+				p = NewPacket(TMessage,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
 				h.Reader <- p
 			}
 		case TServerInfo:
