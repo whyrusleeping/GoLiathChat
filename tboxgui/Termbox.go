@@ -5,9 +5,20 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+// Grid Orientation
 const (
 	Horizontal = iota
 	Vertical
+	Grid
+)
+
+// Control Alignment
+const (
+	AlignUp = iota
+	AlignDown
+	AlignCenter
+	AlignLeft
+	AlignRight
 )
 
 // Any object that is drawable
@@ -72,14 +83,15 @@ func (c *Cursor) Draw() {
 }
 
 type Control struct {
-	name       string // The name of the control
-	x          int    // Starting X Position
-	y          int    // Starting Y Position
-	width      int    // Width of the Control
-	height     int    // Height of the Control
-	max_height int    // The max height (defaults to height)
-	max_width  int    // The max width (defaults to width)
-	snap       int    // How the control will snap (LEFT RIGHT CENTER)
+	name             string // The name of the control
+	x                int    // Starting X Position
+	y                int    // Starting Y Position
+	width            int    // Width of the Control
+	height           int    // Height of the Control
+	max_height       int    // The max height (defaults to height)
+	max_width        int    // The max width (defaults to width)
+	vertical_align   int    // How the control will align vertically (UP DOWN CENTER)
+	horizontal_align int    // How the controll will align horizontally (LEFT RIGHT CENTER)
 }
 
 // Draw the control
