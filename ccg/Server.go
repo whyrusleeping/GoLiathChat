@@ -17,14 +17,14 @@ import (
 )
 
 type Server struct {
-	messages   *MessageLog
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
 	users      map[string]*User
+	uplFiles   map[string]*File
 	listener   net.Listener
 	com        chan Packet
 	parse      chan Packet
-	uplFiles   map[string]*File
+	messages   *MessageLog
 }
 
 func (s *Server) LoginPrompt() {
@@ -43,9 +43,6 @@ func (s *Server) LoginPrompt() {
 }
 
 func StartServer() *Server {
-	s := Server{}
-	s.PassHashes = make(map[string][]byte)
-	s.LoginPrompt()
 	cert, err := tls.LoadX509KeyPair("../certs/server.pem", "../certs/server.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
@@ -54,19 +51,20 @@ func StartServer() *Server {
 	config.Rand = rand.Reader
 	service := ":10234"
 	listener, err := tls.Listen("tcp", service, &config)
-	s.listener = listener
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}
-	s.users = make(map[string]*User)
-	s.regReqs = make(map[string][]byte)
-	s.uplFiles = make(map[string]*File)
-	s.loadUserList("users.f")
-	if err != nil {
-		panic(err)
+	s := Server{
+		make(map[string][]byte),
+		make(map[string][]byte),
+		make(map[string]*User),
+		make(map[string]*File),
+		listener,
+		make(chan Packet, 10),   //Channel for incoming messages
+		make(chan Packet, 10), //Channel for parsed messages to be sent
+		NewLog(64),
 	}
-	s.com = make(chan Packet, 10)   //Channel for incoming messages
-	s.parse = make(chan Packet, 10) //Channel for parsed messages to be sent
+	s.loadUserList("users.f")
 	return &s
 }
 
@@ -171,9 +169,8 @@ func (s *Server) Listen() {
 
 //Handles all incoming user commands
 func (s *Server) command(p Packet) {
-	cmd := extractCommand(string(p.Payload))
-	args := strings.Split(string(p.Payload), " ")
-	switch cmd {
+	args := strings.Split(string(p.Payload[1:]), " ")
+	switch args[0] {
 	case "accept":
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")

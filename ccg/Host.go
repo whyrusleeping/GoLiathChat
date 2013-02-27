@@ -30,11 +30,11 @@ type Host struct {
 }
 
 func NewHost() *Host {
-	h := Host{}
 	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
 		//Bad certs!!!
 	}
+	h := Host{}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
 	h.filesLocal = make(map[string]*File)
@@ -106,14 +106,6 @@ func (h *Host) writeMessages() {
 				}
 				rp := NewPacket(TMessage, "Notice", []byte(txt))
 				h.Reader <- rp
-			case "accept":
-				break
-			case "dl":
-				break
-			default:
-				go func() {
-					h.Reader <- NewPacket(TMessage, "Notice",[]byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
-				}()
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
@@ -188,7 +180,7 @@ func (h *Host) readMessages() {
 			//This may require NAT traversal and other ugly things.. bleh
 
 			//For now, just attempt a TCP connection
-
+			//Actually, just do nothing for now. Because doing nothing is better than crappy code.
 		case THistory:
 			h.messages.AddEntryInOrder(&p)
 		default:
