@@ -23,21 +23,24 @@ type Host struct {
 	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
-	filesLocal			map[string]*File
+	filesLocal		map[string]*File
 	filesAvailable []string
 	usersOnline	   []string
+	messages		*MessageLog
 }
 
 func NewHost() *Host {
 	h := Host{}
 	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
+		//Bad certs!!!
 	}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
 	h.filesLocal = make(map[string]*File)
 	h.usersOnline = make([]string, 0, 256)
 	h.filesAvailable = make([]string, 0 ,256)
+	h.messages = NewLog(64)
 	return &h
 }
 
@@ -145,6 +148,9 @@ func (h *Host) readMessages() {
 		}
 		//No error, continue on!
 		switch p.Typ {
+		case TMessage:
+			h.messages.PushMessage(p)
+			h.Reader <- p
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
@@ -183,6 +189,8 @@ func (h *Host) readMessages() {
 
 			//For now, just attempt a TCP connection
 
+		case THistory:
+			h.messages.AddEntryInOrder(p)
 		default:
 			h.Reader <- p
 		}

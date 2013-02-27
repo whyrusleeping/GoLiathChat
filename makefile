@@ -11,3 +11,8 @@ server:
 
 tbexample:
 	go build example.go
+
+test: all
+	cd bin
+	./server
+	

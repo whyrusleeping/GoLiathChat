@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"errors"
+	"strconv"
 	"fmt"
 	"log"
 	"net"
@@ -16,10 +17,10 @@ import (
 )
 
 type Server struct {
-	users      map[string]*User
-	messages   *list.List
+	messages   *MessageLog
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
+	users      map[string]*User
 	listener   net.Listener
 	com        chan Packet
 	parse      chan Packet
@@ -186,6 +187,15 @@ func (s *Server) command(p Packet) {
 		//User wishes to download a file
 		//So send it to em?
 		go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+	case "history":
+		count,_ := strconv.Atoi(args[1])
+		hist := s.messages.LastNEntries(count)
+		go func() {
+			u := s.users[p.Username]
+			for _,m := range hist {
+				u.Conn.Write(m.GetBytes())
+			}
+		}()
 	default:
 		log.Println("Command unrecognized")
 	}
