@@ -86,7 +86,6 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(TRegister, uname, key)
-		fmt.Println(rp)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
@@ -105,7 +104,7 @@ func (s *Server) AuthUser(u *User) bool {
 	u.Username = string(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
 	if _, ok := s.PassHashes[u.Username]; !ok {
-		fmt.Println("Not a registered user! Closing connection.")
+		log.Println("Not a registered user! Closing connection.")
 		return false
 	}
 	password := s.PassHashes[u.Username]
@@ -206,7 +205,6 @@ func (s *Server) MessageHandler() {
 	messages := *list.New()
 	for {
 		p := <-s.com
-		log.Println(p)
 		switch p.Typ {
 		case TMessage:
 			messages.PushFront(p)
@@ -221,7 +219,7 @@ func (s *Server) MessageHandler() {
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
-			fmt.Printf("User %s wants to upload %s.\n", p.Username, fname)
+			log.Printf("User %s wants to upload %s.\n", p.Username, fname)
 			nblocks := ReadInt32(buf)
 			flags,_ := buf.ReadByte()
 			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
