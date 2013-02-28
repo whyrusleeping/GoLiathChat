@@ -78,5 +78,6 @@ func NewPacket(mtype byte, username string, Payload []byte) Packet {
 	p.Typ = mtype
 	p.Timestamp = int32(time.Now().Unix())
 	p.Payload = Payload
+	p.Username = username
 	return p
 }

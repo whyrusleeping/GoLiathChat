@@ -17,6 +17,7 @@ import (
 	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
+	"os"
 )
 
 type MessageObject struct {
@@ -28,6 +29,10 @@ type MessageObject struct {
 func main() {
 	//hostname := "127.0.0.1:10234"
 	hostname := "jero.my:10234"
+
+	if len(os.Args) > 1 {
+		hostname = os.Args[1]
+	}
 
 	/* Initialize Connection */
 	serv := ccg.NewHost()

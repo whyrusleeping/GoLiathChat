@@ -64,7 +64,7 @@ func StartServer() *Server {
 		make(chan Packet, 10), //Channel for parsed messages to be sent
 		NewLog(64),
 	}
-	s.loadUserList("users.f")
+	s.LoginPrompt()
 	return &s
 }
 
@@ -86,6 +86,7 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(TRegister, uname, key)
+		fmt.Println(rp)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
@@ -205,6 +206,7 @@ func (s *Server) MessageHandler() {
 	messages := *list.New()
 	for {
 		p := <-s.com
+		log.Println(p)
 		switch p.Typ {
 		case TMessage:
 			messages.PushFront(p)
