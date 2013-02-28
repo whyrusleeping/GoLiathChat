@@ -3,6 +3,7 @@ package ccg
 import (
 	"testing"
 	"bytes"
+	"math/rand"
 )
 
 func TestPasswordHash(t *testing.T) {
@@ -34,5 +35,23 @@ func TestInt32Stream(t *testing.T) {
 	ver := ReadInt32(buf)
 	if num != ver {
 		t.Fail()
+	}
+}
+
+func BenchmarkBufferPool(b *testing.B) {
+	bp := NewBufferPool(32)
+	for i := 0; i < b.N; i++ {
+		a := bp.GetBuffer(2000 + rand.Intn(3000))
+		//useBuffer(a)
+		a[3] = 6
+		bp.Free(a)
+	}
+}
+
+func BenchmarkNonBufferPool(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		a := make([]byte, 2000 + rand.Intn(3000))
+		//useBuffer(a)
+		a[3] = 6
 	}
 }
