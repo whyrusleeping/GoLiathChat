@@ -2,6 +2,8 @@ package ccg
 
 import ()
 
+var bufPool = NewBufferPool(32)
+
 type BufferPool struct {
 	open [][]byte
 	emptyOnFree bool

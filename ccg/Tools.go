@@ -86,7 +86,7 @@ func BytesFromLongString(s string) []byte {
 }
 
 func GeneratePepper() []byte {
-	pep := make([]byte, 32)
+	pep := bufPool.GetBuffer(32)
 	rand.Reader.Read(pep)
 	return pep
 }

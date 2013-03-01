@@ -44,7 +44,7 @@ func (p Packet) GetBytes() []byte {
 func ReadPacket(conn net.Conn) (Packet, error) {
 	flagBuf := make([]byte, 1)
 	lenBuf := make([]byte, 2)
-	timeBuf := make([]byte, 4)
+	timeBuf := bufPool.GetBuffer(4)
 	var userLen uint16
 	var payLen uint32
 	//Need to check connectivity to see if a disconnect has happened
@@ -60,15 +60,18 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	conn.Read(lenBuf)
 	buf = bytes.NewBuffer(lenBuf)
 	binary.Read(buf, binary.LittleEndian, &userLen)
-	userBuf := make([]byte, userLen)
+	userBuf := bufPool.GetBuffer(int(userLen))
 	conn.Read(userBuf)
 	p.Username = string(userBuf)
 	conn.Read(timeBuf)
 	buf = bytes.NewBuffer(timeBuf)
 	binary.Read(buf, binary.LittleEndian, &payLen)
-	strBuf := make([]byte, payLen)
+	strBuf := bufPool.GetBuffer(int(payLen))
 	conn.Read(strBuf)
 	p.Payload = strBuf
+	bufPool.Free(userBuf)
+	bufPool.Free(strBuf)
+	bufPool.Free(timeBuf)
 	return p, nil
 }
 

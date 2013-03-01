@@ -229,7 +229,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 
 	//Read the servers response
 	h.conn.Read(sr)
-	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 7, 32)
+	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 3, 32)
 
 	//and ensure that it is correct
 	ver := true
