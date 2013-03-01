@@ -25,50 +25,7 @@ const (
 type Drawable interface {
 	Draw()
 	GetName() string
-}
-
-type DrawableList struct {
-	l     []Drawable
-	count int
-}
-
-func NewDrawableList() *DrawableList {
-	return &DrawableList{make([]Drawable, 16), 0}
-}
-
-func (dl *DrawableList) Add(d Drawable) {
-	if dl.count >= len(dl.l) {
-		nl := make([]Drawable, len(dl.l)*2)
-		copy(nl, dl.l)
-		dl.l = nl
-	}
-	dl.l[dl.count] = d
-	dl.count++
-}
-
-func (dl *DrawableList) Remove(d Drawable) {
-	for i := 0; i < dl.count; i++ {
-		if d == dl.l[i] {
-			dl.RemoveAt(i)
-			return
-		}
-	}
-}
-
-func (dl *DrawableList) RemoveAt(i int) {
-	//TODO: bounds checks!
-	for ; i < dl.count-1; i++ {
-		dl.l[i] = dl.l[i+1]
-	}
-	dl.l[i] = nil
-	dl.count--
-}
-
-func (dl *DrawableList) ItemAt(i int) Drawable {
-	if i < 0 || i >= dl.count {
-		return nil
-	}
-	return dl.l[i]
+	GetControl() *Control
 }
 
 // A cursor
@@ -90,6 +47,8 @@ type Control struct {
 	height           int    // Height of the Control
 	max_height       int    // The max height (defaults to height)
 	max_width        int    // The max width (defaults to width)
+	min_height       int    // The min height 
+	min_width        int    // The min width
 	vertical_align   int    // How the control will align vertically (UP DOWN CENTER)
 	horizontal_align int    // How the controll will align horizontally (LEFT RIGHT CENTER)
 }
@@ -102,16 +61,20 @@ func (c *Control) GetName() string {
 	return c.name
 }
 
+func (c *Control) GetControl() *Control {
+	return c
+}
+
 // Make a new control with these parameters
-func NewControl(name string, x, y, max_height, max_width int) *Control {
+func NewControl(name string, x, y, min_height, min_width int) *Control {
 	c := Control{}
 	c.name = name
 	c.x = x
 	c.y = y
-	c.max_height = max_height
-	c.max_width = max_width
-	c.height = max_height
-	c.width = max_width
+	c.min_height = min_height
+	c.min_width = min_width
+	c.height = min_height
+	c.width = min_width
 	return &c
 }
 
@@ -126,23 +89,31 @@ type Button struct {
 
 // Draw the button
 func (b *Button) Draw() {
+	txt_len := len(b.text)
+	if(txt_len > b.control.width) {
+		txt_len = b.control.width
+	}
 	if b.selected {
-		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorBlack, termbox.ColorGreen)
+		WriteColor(b.control.x, b.control.y, b.text[:txt_len], termbox.ColorBlack, termbox.ColorGreen)
 	} else {
-		WriteColor(b.control.x, b.control.y, b.text[:b.control.width], termbox.ColorGreen, termbox.ColorBlack)
+		WriteColor(b.control.x, b.control.y, b.text[:txt_len], termbox.ColorGreen, termbox.ColorBlack)
 	}
 }
 
 // Make a new buton
-func NewButton(name, text string, x, y, max_height, max_width int) *Button {
+func NewButton(name, text string, x, y, min_width int) *Button {
 	b := Button{}
-	b.control = NewControl(name, x, y, max_height, max_width)
+	b.control = NewControl(name, x, y, 1, min_width)
 	b.selected = false
 	return &b
 }
 
 func (b *Button) GetName() string {
 	return b.control.name
+}
+
+func (b *Button) GetControl() *Control {
+	return b.control
 }
 
 //Provides an area for scrolling text
@@ -175,6 +146,10 @@ func (scr *ScrollingTextArea) Draw() {
 
 func (scr *ScrollingTextArea) GetName() string {
 	return scr.control.name
+}
+
+func (scr *ScrollingTextArea) GetControl() *Control {
+	return scr.control
 }
 
 func (scr *ScrollingTextArea) MoveUp() {
@@ -233,10 +208,18 @@ func (t *TextBox) Draw() {
 	}
 }
 
+func (t *TextBox) GetName() string {
+	return t.control.name
+}
+
+func (t *TextBox) GetControl() *Control {
+	return t.control
+}
+
 // Creates a new textbox
-func NewTextBox(name string, x, y, max_width int) *TextBox {
+func NewTextBox(name string, x, y, min_width int) *TextBox {
 	t := TextBox{
-		NewControl(name, x, y, 1, max_width),
+		NewControl(name, x, y, 1, min_width),
 		false,
 		false,
 		Cursor{x, y},
@@ -308,11 +291,59 @@ func (p *Panel) GetName() string {
 	return p.control.name
 }
 
+func (p *Panel) GetControl() *Control {
+	return p.control
+}
+
 // Resize
 func (p *Panel) Resize() {
+	screen_width, screen_height := termbox.Size()
+	x_offset := p.GetControl().x
+	y_offset := p.GetControl().y
+
+
 	if p.Layout == Horizontal {
+		min_width := 0
+
+		for _, object := range p.objects {
+			min_width += object.GetControl().min_width
+		}
+
+		div_width := 0
+		if screen_width > min_width {
+			div_width = screen_width / len(p.objects)
+		} else {
+			div_width = min_width / len(p.objects)
+		}
+		i := 0
+		for _, object := range p.objects {
+			c := object.GetControl()
+			c.width = div_width
+			c.x = x_offset + (i * div_width)
+			c.y = y_offset
+		}
 
 	} else if p.Layout == Vertical {
+		min_height := 0
+
+		for _, object := range p.objects {
+			min_height += object.GetControl().min_height
+		}
+
+		div_height := 0
+		if screen_height > min_height {
+			div_height = screen_height / len(p.objects)
+		} else {
+			div_height = min_height / len(p.objects)
+		}
+		i := 0
+		for _, object := range p.objects {
+			c := object.GetControl()
+			c.width = div_height
+			c.y = y_offset + (i * div_height)
+			c.x = x_offset
+			i += 1
+		}
 
 	}
 }

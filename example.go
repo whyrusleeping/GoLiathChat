@@ -21,20 +21,26 @@ func testLayout() {
 	// Start the goroutines
 	go termboxEventPoller(termboxEvent)
 
+
+	H_Panel := tboxgui.NewPanel("Horiz Panel", 1,1, 100, 100, tboxgui.Horizontal)
+	btn1 := tboxgui.NewButton("Button 1", "Test Button 1", 1, 1, len("Test Button 1"))
+	btn2 := tboxgui.NewButton("Button 2", "Test Button 2", 2, 2, len("Test Button 2"))
+	H_Panel.AddObject(btn1)
+	H_Panel.AddObject(btn2)
+	H_Panel.Resize()
 	for !quit {
 		tboxgui.Clear()
 		_, sy := termbox.Size()
 		tboxgui.Write(0, sy-1, "Panel Test")
+		H_Panel.Draw()
 		tboxgui.Flush()
-
 		select {
 		case event := <-termboxEvent:
 			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
 				quit = true
 			} else if event.Type == termbox.EventResize {
-				//Resize
+				H_Panel.Resize()
 			} else {
-
 			}
 		}
 	}
