@@ -22,9 +22,21 @@ func testLayout() {
 	go termboxEventPoller(termboxEvent)
 
 
-	H_Panel := tboxgui.NewPanel("Horiz Panel", 1,1, 100, 100, tboxgui.Horizontal)
+	H_Panel := tboxgui.NewPanel("Horiz Panel", 0, 0, 100, 100, tboxgui.Vertical)
 	btn1 := tboxgui.NewButton("Button 1", "Test Button 1", 1, 1, len("Test Button 1"))
 	btn2 := tboxgui.NewButton("Button 2", "Test Button 2", 2, 2, len("Test Button 2"))
+	stb := tboxgui.NewScrollingTextArea("TestScrollingTextArea", 1, 1, 10 , 20 , 200)
+
+	stb.AddLine("Hello")
+	stb.AddLine("Line")
+	stb.AddLine("after")
+	stb.AddLine("line")
+	stb.AddLine("of")
+	stb.AddLine("text")
+	stb.AddLine("whats???")
+	stb.AddLine("i dont know")
+
+	H_Panel.AddObject(stb)
 	H_Panel.AddObject(btn1)
 	H_Panel.AddObject(btn2)
 	H_Panel.Resize()
@@ -33,6 +45,7 @@ func testLayout() {
 		_, sy := termbox.Size()
 		tboxgui.Write(0, sy-1, "Panel Test")
 		H_Panel.Draw()
+		
 		tboxgui.Flush()
 		select {
 		case event := <-termboxEvent:

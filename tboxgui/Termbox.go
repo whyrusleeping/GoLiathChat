@@ -89,10 +89,12 @@ type Button struct {
 
 // Draw the button
 func (b *Button) Draw() {
-	txt_len := len(b.text)
+	txt_len := len(b.text) /*
 	if(txt_len > b.control.width) {
 		txt_len = b.control.width
-	}
+	} */
+	//b.control.width = txt_len
+	//b.control.min_width = txt_len
 	if b.selected {
 		WriteColor(b.control.x, b.control.y, b.text[:txt_len], termbox.ColorBlack, termbox.ColorGreen)
 	} else {
@@ -103,6 +105,7 @@ func (b *Button) Draw() {
 // Make a new buton
 func NewButton(name, text string, x, y, min_width int) *Button {
 	b := Button{}
+	b.text = text
 	b.control = NewControl(name, x, y, 1, min_width)
 	b.selected = false
 	return &b
@@ -311,7 +314,7 @@ func (p *Panel) Resize() {
 
 		div_width := 0
 		if screen_width > min_width {
-			div_width = screen_width / len(p.objects)
+			div_width = (screen_width - x_offset) / len(p.objects)
 		} else {
 			div_width = min_width / len(p.objects)
 		}
@@ -321,6 +324,7 @@ func (p *Panel) Resize() {
 			c.width = div_width
 			c.x = x_offset + (i * div_width)
 			c.y = y_offset
+			i += 1
 		}
 
 	} else if p.Layout == Vertical {
@@ -332,7 +336,7 @@ func (p *Panel) Resize() {
 
 		div_height := 0
 		if screen_height > min_height {
-			div_height = screen_height / len(p.objects)
+			div_height = (screen_height - y_offset)/ len(p.objects)
 		} else {
 			div_height = min_height / len(p.objects)
 		}
