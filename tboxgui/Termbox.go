@@ -21,6 +21,14 @@ const (
 	AlignRight
 )
 
+
+type Selectable interface {
+	Select()
+	DeSelect()
+	KeyEvent(termbox.Event)
+}
+
+
 // Any object that is drawable
 type Drawable interface {
 	Draw()
@@ -269,6 +277,7 @@ type Panel struct {
 	VPercent int
 	Layout   int // 1 Horizontal 2 Vertical
 	objects  map[string]Drawable
+	selectables  *list.List
 }
 
 // Make a new panel
@@ -278,7 +287,8 @@ func NewPanel(name string, x, y, HPercent, VPercent, Layout int) *Panel {
 		HPercent,
 		VPercent,
 		Layout,
-		make(map[string]Drawable)}
+		make(map[string]Drawable),
+		list.New()}
 	return &p
 }
 
@@ -354,8 +364,14 @@ func (p *Panel) Resize() {
 
 // Add an object
 func (p *Panel) AddObject(d Drawable) {
+
+
 	if _, exists := p.objects[d.GetName()]; !exists {
 		p.objects[d.GetName()] = d
+		_, ok := d.(Selectable)
+		if(ok) {
+			p.selectables.PushBack(d)
+		}
 	} else {
 		// Object exists...
 	}
@@ -363,12 +379,21 @@ func (p *Panel) AddObject(d Drawable) {
 
 // Remove an object
 func (p *Panel) RemoveDrawable(d Drawable) {
+	_, selectable := d.(Selectable)
+	if (selectable) {
+		for cur := p.selectables.Front(); cur != nil; cur = cur.Next() {
+			if(cur.Value.(Selectable) == d.(Selectable)){
+				p.selectables.Remove(cur)
+				break
+			}
+		}
+	}
 	delete(p.objects, d.GetName())
 }
 
 // Remove an object
 func (p *Panel) RemoveName(d string) {
-	delete(p.objects, d)
+	p.RemoveDrawable(p.objects[d])
 }
 
 type ScrollPanel struct {
@@ -391,16 +416,24 @@ func (s *ScrollPanel) GetName() string {
 
 type Window struct {
 	name    string
-	objects *list.List // Drawable
-
-	OnKeyEvent func(termbox.Event)
+	panel   *Panel
+	selected *list.Element
 }
 
 func (w *Window) Draw() {
-	var d Drawable
-	for object := w.objects.Front(); object != nil; object = object.Next() {
-		d = object.Value.(Drawable)
-		d.Draw()
+	w.panel.Draw()
+}
+
+func (w *Window) Resize() {
+	w.panel.Resize()
+}
+
+func (w *Window) OnKeyEvent(event termbox.Event) {
+	if(event.Key == termbox.KeyTab) {
+		w.selected = w.selected.Next()
+		if(w.selected == nil) {
+			w.selected = w.panel.selectables.Front()
+		}
 	}
 }
 
