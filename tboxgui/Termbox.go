@@ -34,6 +34,7 @@ type Drawable interface {
 	Draw()
 	GetName() string
 	GetControl() *Control
+	Resize(int, int) (int, int)
 }
 
 // A cursor
@@ -61,17 +62,6 @@ type Control struct {
 	horizontal_align int    // How the controll will align horizontally (LEFT RIGHT CENTER)
 }
 
-// Draw the control
-func (c *Control) Draw() {
-}
-
-func (c *Control) GetName() string {
-	return c.name
-}
-
-func (c *Control) GetControl() *Control {
-	return c
-}
 
 // Make a new control with these parameters
 func NewControl(name string, x, y, min_height, min_width int) *Control {
@@ -108,6 +98,10 @@ func (b *Button) Draw() {
 	} else {
 		WriteColor(b.control.x, b.control.y, b.text[:txt_len], termbox.ColorGreen, termbox.ColorBlack)
 	}
+}
+
+func (b *Button) Resize(width, height int) (int, int) {
+	return width, 1
 }
 
 // Make a new buton
@@ -153,6 +147,13 @@ func (scr *ScrollingTextArea) Draw() {
 		str := scr.Text[scr.numStr-(1+scr.offset+i)]
 		Write(scr.control.x, (scr.control.y+scr.control.height)-i, str)
 	}
+}
+
+func (scr *ScrollingTextArea) Resize(width, height int) (int, int) {
+	//use as much space as you can!
+	scr.control.width = width
+	scr.control.height = height
+	return width, height
 }
 
 func (scr *ScrollingTextArea) GetName() string {
@@ -270,6 +271,12 @@ func (t *TextBox) OnKeyEvent(e termbox.Event) {
 	t.cursor.x = t.control.x + t.position
 }
 
+func (t *TextBox) Resize(width, height int) (int, int) {
+	t.control.height = 1
+	t.control.width = width
+	return width, 1
+}
+
 // A panel
 type Panel struct {
 	control  *Control
@@ -309,11 +316,10 @@ func (p *Panel) GetControl() *Control {
 }
 
 // Resize
-func (p *Panel) Resize() {
-	screen_width, screen_height := termbox.Size()
+func (p *Panel) Resize(width, height int) (int, int) {
+	screen_width, screen_height := width, height
 	x_offset := p.GetControl().x
 	y_offset := p.GetControl().y
-
 
 	if p.Layout == Horizontal {
 		min_width := 0
@@ -351,15 +357,20 @@ func (p *Panel) Resize() {
 			div_height = min_height / len(p.objects)
 		}
 		i := 0
+		y_pos := y_offset
 		for _, object := range p.objects {
+			//Dynamically calculate div_height
+			div_height = (screen_height - (y_offset - y_pos)) / (len(p.objects) - i)
+			_,h := object.Resize(screen_width, div_height)
 			c := object.GetControl()
-			c.width = div_height
-			c.y = y_offset + (i * div_height)
 			c.x = x_offset
-			i += 1
+			c.y = y_pos
+			y_pos += h
+			i++
 		}
 
 	}
+	return width, height
 }
 
 // Add an object
@@ -425,7 +436,7 @@ func (w *Window) Draw() {
 }
 
 func (w *Window) Resize() {
-	w.panel.Resize()
+	w.panel.Resize(termbox.Size())
 }
 
 func (w *Window) OnKeyEvent(event termbox.Event) {

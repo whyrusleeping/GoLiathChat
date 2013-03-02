@@ -39,20 +39,19 @@ func testLayout() {
 	H_Panel.AddObject(stb)
 	H_Panel.AddObject(btn1)
 	H_Panel.AddObject(btn2)
-	H_Panel.Resize()
+	H_Panel.Resize(termbox.Size())
 	for !quit {
 		tboxgui.Clear()
 		_, sy := termbox.Size()
 		tboxgui.Write(0, sy-1, "Panel Test")
 		H_Panel.Draw()
-		
 		tboxgui.Flush()
 		select {
 		case event := <-termboxEvent:
 			if event.Key == termbox.KeyCtrlC || event.Key == termbox.KeyCtrlQ {
 				quit = true
 			} else if event.Type == termbox.EventResize {
-				H_Panel.Resize()
+				H_Panel.Resize(termbox.Size())
 			} else {
 			}
 		}
