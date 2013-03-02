@@ -357,19 +357,26 @@ func (p *Panel) Resize(width, height int) (int, int) {
 			div_height = min_height / len(p.objects)
 		}
 		i := 0
+		//Lets start placing our objects at the top of the panel
 		y_pos := y_offset
 		for _, object := range p.objects {
-			//Dynamically calculate div_height
+			//Dynamically calculate div_height, 
+			//it should be the remaining vertical space divided by the number of remaining objects
 			div_height = (screen_height - (y_offset - y_pos)) / (len(p.objects) - i)
+			//give the object the maximum limit of the space it can occupy
+			//It will return how much it used, here we only care about the vertical space
 			_,h := object.Resize(screen_width, div_height)
 			c := object.GetControl()
 			c.x = x_offset
 			c.y = y_pos
+			//The next control should be placed just after this one
 			y_pos += h
 			i++
 		}
 
 	}
+
+	//Potential to have dynamically sized panels that only take up as much space as they need
 	return width, height
 }
 
