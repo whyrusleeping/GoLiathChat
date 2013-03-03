@@ -8,13 +8,14 @@ import (
 type User struct {
 	Conn      net.Conn
 	Username  string
+	Nickname  string
 	perms     byte
 	Outp      chan<- Packet
 	connected bool
 }
 
 func UserWithConn(Conn net.Conn) *User {
-	u := User{Conn, "", 0, nil, true}
+	u := User{Conn, "", "",0, nil, true}
 	return &u
 }
 
@@ -23,7 +24,9 @@ func UserWithConn(Conn net.Conn) *User {
 func (u *User) Listen() {
 	for {
 		p, err := ReadPacket(u.Conn)
-		p.Username = u.Username
+		if p.Typ == TMessage && p.Payload[0] != '/' {
+			p.Username = u.Nickname
+		}
 		if err != nil {
 			log.Printf("%s has disconnected.\n", u.Username)
 			u.Conn.Close()

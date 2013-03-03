@@ -12,8 +12,8 @@ import (
 
 //Login Flags
 const (
-	fAnon      = 1 << 0
-	fInvisible = 1 << 1
+	fAnon      = 1 << iota
+	fInvisible
 )
 
 //Usage is simple, read messages from the Reader, and write to the Writer.

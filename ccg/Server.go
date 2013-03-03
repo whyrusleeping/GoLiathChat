@@ -13,13 +13,16 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Server struct {
 	regReqs    map[string][]byte
-	PassHashes map[string][]byte
-	users      map[string]*User
+	PassHashes map[string][]byte //TODO: make lock for this map
+	PHlock	   sync.RWMutex
+	users      map[string]*User //TODO: this one too, and probably uplFiles
+	UserLock   sync.RWMutex
 	uplFiles   map[string]*File
 	listener   net.Listener
 	com        chan Packet
@@ -57,7 +60,9 @@ func StartServer() *Server {
 	s := Server{
 		make(map[string][]byte),
 		make(map[string][]byte),
+		sync.RWMutex{},
 		make(map[string]*User),
+		sync.RWMutex{},
 		make(map[string]*File),
 		listener,
 		make(chan Packet, 10),   //Channel for incoming messages
@@ -75,7 +80,9 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 	u.Conn.Read(checkByte)
 	if checkByte[0] == TLogin {
 		if s.AuthUser(u) {
+			s.UserLock.Lock()
 			s.users[u.Username] = u
+			s.UserLock.Unlock()
 			u.Listen()
 		} else {
 			u.Conn.Close()
@@ -104,11 +111,13 @@ func (s *Server) AuthUser(u *User) bool {
 	u.Username = string(unamebuf)
 	bufPool.Free(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", u.Username)
-	if _, ok := s.PassHashes[u.Username]; !ok {
+	s.PHlock.RLock()
+	password, ok := s.PassHashes[u.Username]
+	s.PHlock.RUnlock()
+	if !ok {
 		log.Println("Not a registered user! Closing connection.")
 		return false
 	}
-	password := s.PassHashes[u.Username]
 
 	//Generate a challenge and send it to the server
 	sc := GeneratePepper()
@@ -179,7 +188,9 @@ func (s *Server) command(p Packet) {
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
 		} else {
+			s.PHlock.Lock()
 			s.PassHashes[args[1]] = s.regReqs[args[1]]
+			s.PHlock.Unlock()
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList("users.f")
@@ -191,12 +202,18 @@ func (s *Server) command(p Packet) {
 	case "history":
 		count,_ := strconv.Atoi(args[1])
 		hist := s.messages.LastNEntries(count)
+		s.UserLock.RLock()
+		u := s.users[p.Username]
+		s.UserLock.RUnlock()
 		go func() {
-			u := s.users[p.Username]
 			for _,m := range hist {
 				u.Conn.Write(m.GetBytes())
 			}
 		}()
+	case "ninja":
+		s.UserLock.Lock()
+		s.users[p.Username].Nickname = "Anon"
+		s.UserLock.Unlock()
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -235,7 +252,7 @@ func (s *Server) MessageHandler() {
 			buf.Read(blck.data)
 			s.uplFiles[fname].data[packID] = blck
 			if s.uplFiles[fname].IsComplete() {
-				np := NewPacket(1,"Server",[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
+				np := NewPacket(TMessage,"Server",[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
 				s.parse <- np
 			}
 		case TPeerRequest:
@@ -249,10 +266,12 @@ func (s *Server) MessageHandler() {
 //This includes names of online users and the list of files available for download
 func (s *Server) SendServerInfo() {
 	buf := new(bytes.Buffer)
+	s.UserLock.RLock()
 	buf.Write(WriteInt32(int32(len(s.users))))
 	for k,_ := range s.users {
 		buf.Write(BytesFromShortString(k))
 	}
+	s.UserLock.RUnlock()
 	buf.Write(WriteInt32(int32(len(s.uplFiles))))
 	for k,_ := range s.uplFiles {
 		buf.Write(BytesFromShortString(k))
@@ -266,9 +285,14 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		b := p.GetBytes()
+		s.UserLock.Lock()
 		for uname, u := range s.users {
 			if !u.connected {
+				go func() {
+				s.UserLock.Lock()
 				delete(s.users, uname)
+				s.UserLock.Unlock()
+			}()
 			} else {
 				_, err := u.Conn.Write(b)
 				if err != nil {
@@ -323,11 +347,13 @@ func (s *Server) loadUserList(filename string) {
 
 func (s *Server) saveUserList(filename string) {
 	wrbuf := new(bytes.Buffer)
+	s.PHlock.RLock()
 	for name, phash := range s.PassHashes {
 		wrbuf.Write(BytesFromShortString(name))
 		//wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
 	}
+	s.PHlock.RUnlock()
 	f, _ := os.Create(filename)
 	_, err := f.Write(wrbuf.Bytes())
 	if err != nil {
