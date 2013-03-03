@@ -66,8 +66,11 @@ func (scr *ScrollingTextArea) AddLine(text string) {
 		scr.Text[scr.numStr] = text
 		scr.numStr++
 	} else {
-		//increase array size
+		nslice := make([]string, len(scr.Text) * 2)
+		copy(nslice, scr.Text)
+		scr.Text = nslice
 	}
+	
 
 	if scr.offset > 0 {
 		scr.offset++
