@@ -6,6 +6,7 @@
 
 package tboxgui
 
+
 //Provides an area for scrolling text
 type ScrollingTextArea struct {
 	control *Control
@@ -70,7 +71,6 @@ func (scr *ScrollingTextArea) AddLine(text string) {
 		copy(nslice, scr.Text)
 		scr.Text = nslice
 	}
-	
 
 	if scr.offset > 0 {
 		scr.offset++
