@@ -11,3 +11,4 @@ server:
 
 tbexample:
 	go build -o bin/example example.go
+

@@ -17,6 +17,7 @@ import (
 	"container/list"
 	"github.com/nsf/termbox-go"
 	"time"
+	"os"
 )
 
 type MessageObject struct {
@@ -26,7 +27,12 @@ type MessageObject struct {
 }
 
 func main() {
+	//hostname := "127.0.0.1:10234"
 	hostname := "jero.my:10234"
+
+	if len(os.Args) > 1 {
+		hostname = os.Args[1]
+	}
 
 	/* Initialize Connection */
 	serv := ccg.NewHost()
@@ -88,7 +94,8 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 
 	// Update the login window
 	updateWindow := func() {
-
+	
+	
 		tboxgui.Clear()
 		sx, sy := termbox.Size()
 
@@ -101,13 +108,13 @@ func displayLoginWindow(serv *ccg.Host) (bool, bool) {
 		tboxgui.WriteCenter((sy/2)+len(name_lines)+1, "Password:")
 		tboxgui.WriteCenterWrap((sy/2)+len(name_lines)+2, pass_lines)
 
-		by := (sy / 2) + len(name_lines) + 2 + len(pass_lines) + 1
+		by := (sy/2)+len(name_lines)+2+len(pass_lines)+1
 
 		loginText := "Login"
 		optionText := "Options"
 		RegisterText := "Register"
-		tboxgui.DrawButton(loginText, (box == 2), (sx/2)-(len(loginText)+4)-((len(optionText)+4)/2), by)
-		tboxgui.DrawButton(optionText, (box == 3), (sx/2)-((len(optionText)+4)/2), by)
+		tboxgui.DrawButton(loginText, (box == 2), (sx/2)-(len(loginText) + 4) - ((len(optionText) +4)/2), by)
+		tboxgui.DrawButton(optionText, (box == 3), (sx/2) - ((len(optionText) + 4) /2), by)
 		tboxgui.DrawButton(RegisterText, (box == 4), 40, by)
 		tboxgui.WriteCenterWrap(sy-len(err_lines), err_lines)
 		tboxgui.Flush()

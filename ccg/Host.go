@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"strings"
 	"bytes"
-	"log"
 	"net"
 	"fmt"
 	"time"
@@ -19,26 +18,29 @@ const (
 
 //Usage is simple, read messages from the Reader, and write to the Writer.
 type Host struct {
+	username	   string
 	conn           net.Conn
 	Writer, Reader chan Packet
 	cert           tls.Certificate
 	config         *tls.Config
-	filesLocal			map[string]*File
+	filesLocal		map[string]*File
 	filesAvailable []string
 	usersOnline	   []string
+	messages		*MessageLog
 }
 
 func NewHost() *Host {
-	h := Host{}
 	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
+		//Bad certs!!!
 	}
+	h := Host{}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
 	h.filesLocal = make(map[string]*File)
 	h.usersOnline = make([]string, 0, 256)
 	h.filesAvailable = make([]string, 0 ,256)
+	h.messages = NewLog(64)
 	return &h
 }
 
@@ -49,7 +51,6 @@ func (h *Host) Connect(hostname string) error {
 		return err
 	}
 	h.conn = conn
-	log.Println("client: connected to: ", h.conn.RemoteAddr())
 
 	h.Reader = make(chan Packet)
 	h.Writer = make(chan Packet)
@@ -68,7 +69,7 @@ func (h *Host) Send(message string) {
 	if message[0] == '/' {
 		mtype = TCommand
 	}
-	pack := NewPacket(mtype, []byte(message))
+	pack := NewPacket(mtype, "", []byte(message))
 	h.Writer <- pack
 }
 
@@ -103,13 +104,8 @@ func (h *Host) writeMessages() {
 				} else {
 					txt = "No files available!"
 				}
-				rp := NewPacket(TMessage, []byte(txt))
-				rp.Username = "Notice"
+				rp := NewPacket(TMessage, "Notice", []byte(txt))
 				h.Reader <- rp
-			default:
-				go func() {
-					h.Reader <- NewPacket(TMessage, []byte(fmt.Sprintf("Command '%s' unrecognized.", cmd)))
-				}()
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
@@ -127,9 +123,9 @@ func (h *Host) SendFile(path string) error {
 		return err
 	}
 	h.filesLocal[path] = fi
-	h.Writer <- NewPacket(TFileInfo, fi.getInfo())
+	h.Writer <- NewPacket(TFileInfo, "", fi.getInfo())
 	for i := 0; i < len(fi.data); i++ {
-		h.Writer <- NewPacket(TFile, fi.getBytesForBlock(i))
+		h.Writer <- NewPacket(TFile, "", fi.getBytesForBlock(i))
 		//Wait two milliseconds between sendings
 		time.Sleep(time.Millisecond * 2)
 	}
@@ -144,12 +140,15 @@ func (h *Host) readMessages() {
 		}
 		//No error, continue on!
 		switch p.Typ {
+		case TMessage:
+			h.messages.PushMessage(&p)
+			h.Reader <- p
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
 			nblocks := ReadInt32(buf)
-			buf.ReadByte()
-			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			flags,_ := buf.ReadByte()
+			h.filesLocal[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
 			fname,_ := ReadShortString(buf)
@@ -160,8 +159,7 @@ func (h *Host) readMessages() {
 			h.filesLocal[fname].data[bid] = blck
 			if h.filesLocal[fname].IsComplete() {
 				h.filesLocal[fname].Save()
-				p = NewPacket(1,[]byte(fmt.Sprintf("%s download complete!",fname)))
-				p.Username = "Notice"
+				p = NewPacket(TMessage,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
 				h.Reader <- p
 			}
 		case TServerInfo:
@@ -177,6 +175,14 @@ func (h *Host) readMessages() {
 			for i := 0; i < nFiles; i++ {
 				h.filesAvailable[i],_ = ReadShortString(buf)
 			}
+		case TPeerInfo:
+			//attempt to make a connection to the peer
+			//This may require NAT traversal and other ugly things.. bleh
+
+			//For now, just attempt a TCP connection
+			//Actually, just do nothing for now. Because doing nothing is better than crappy code.
+		case THistory:
+			h.messages.AddEntryInOrder(&p)
 		default:
 			h.Reader <- p
 		}
@@ -189,7 +195,6 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
-	fmt.Println(phash)
 	h.conn.Write(phash)
 }
 
@@ -200,10 +205,10 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
 	//Write the usernames length, followed by the username.
-	ulen := BytesFromInt32(int32(len(handle)))
+	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)
 	h.conn.Write([]byte(handle))
-
+	h.username = handle
 	//Read the servers challenge
 	sc := make([]byte, 32)
 	h.conn.Read(sc)
@@ -224,7 +229,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 
 	//Read the servers response
 	h.conn.Read(sr)
-	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 7, 32)
+	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 3, 32)
 
 	//and ensure that it is correct
 	ver := true
@@ -239,4 +244,8 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	h.conn.Write(loginByte)
 
 	return true, "Authenticated"
+}
+
+func (h *Host) RequestPeerToPeer(username string) {
+	h.conn.Write(NewPacket(TPeerRequest,h.username,[]byte(username)).GetBytes())
 }

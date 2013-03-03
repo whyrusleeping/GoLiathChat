@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"errors"
+	"strconv"
 	"fmt"
 	"log"
 	"net"
@@ -16,14 +17,14 @@ import (
 )
 
 type Server struct {
-	users      map[string]*User
-	messages   *list.List
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
+	users      map[string]*User
+	uplFiles   map[string]*File
 	listener   net.Listener
 	com        chan Packet
 	parse      chan Packet
-	uplFiles   map[string]*File
+	messages   *MessageLog
 }
 
 func (s *Server) LoginPrompt() {
@@ -42,30 +43,28 @@ func (s *Server) LoginPrompt() {
 }
 
 func StartServer() *Server {
-	s := Server{}
-	s.PassHashes = make(map[string][]byte)
-	s.LoginPrompt()
 	cert, err := tls.LoadX509KeyPair("../certs/server.pem", "../certs/server.key")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}
 	config := tls.Config{Certificates: []tls.Certificate{cert}}
 	config.Rand = rand.Reader
-	service := "127.0.0.1:10234"
+	service := ":10234"
 	listener, err := tls.Listen("tcp", service, &config)
-	s.listener = listener
 	if err != nil {
 		log.Fatalf("server: listen: %s", err)
 	}
-	s.users = make(map[string]*User)
-	s.regReqs = make(map[string][]byte)
-	s.uplFiles = make(map[string]*File)
-	s.loadUserList("users.f")
-	if err != nil {
-		panic(err)
+	s := Server{
+		make(map[string][]byte),
+		make(map[string][]byte),
+		make(map[string]*User),
+		make(map[string]*File),
+		listener,
+		make(chan Packet, 10),   //Channel for incoming messages
+		make(chan Packet, 10), //Channel for parsed messages to be sent
+		NewLog(64),
 	}
-	s.com = make(chan Packet, 10)   //Channel for incoming messages
-	s.parse = make(chan Packet, 10) //Channel for parsed messages to be sent
+	s.LoginPrompt()
 	return &s
 }
 
@@ -83,11 +82,10 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 		}
 	} else if checkByte[0] == TRegister {
 		uname, _ := ReadShortString(u.Conn)
-		key := make([]byte, 32)
+		key := bufPool.GetBuffer(32)
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
-		rp := NewPacket(TRegister, key)
-		rp.Username = uname
+		rp := NewPacket(TRegister, uname, key)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
@@ -101,12 +99,13 @@ func (s *Server) HandleUser(u *User, outp chan<- Packet) {
 func (s *Server) AuthUser(u *User) bool {
 	//Read the length of the clients Username, followed by the Username
 	ulen := ReadInt32(u.Conn)
-	unamebuf := make([]byte, ulen)
+	unamebuf := bufPool.GetBuffer(int(ulen))
 	u.Conn.Read(unamebuf)
 	u.Username = string(unamebuf)
-	log.Printf("User %s is trying to authenticate.\n", string(unamebuf))
+	bufPool.Free(unamebuf)
+	log.Printf("User %s is trying to authenticate.\n", u.Username)
 	if _, ok := s.PassHashes[u.Username]; !ok {
-		fmt.Println("Not a registered user! Closing connection.")
+		log.Println("Not a registered user! Closing connection.")
 		return false
 	}
 	password := s.PassHashes[u.Username]
@@ -116,8 +115,8 @@ func (s *Server) AuthUser(u *User) bool {
 	u.Conn.Write(sc)
 
 	//Read the clients password hash and their response to the challenge
-	hashA := make([]byte, 32)
-	cc := make([]byte, 32)
+	hashA := bufPool.GetBuffer(32)
+	cc := bufPool.GetBuffer(32)
 	u.Conn.Read(hashA)
 	u.Conn.Read(cc)
 
@@ -133,13 +132,15 @@ func (s *Server) AuthUser(u *User) bool {
 	for i := 0; ver && i < len(hashA); i++ {
 		ver = ver && (hashA[i] == hashAver[i])
 	}
+	bufPool.Free(hashA)
+	bufPool.Free(cc)
 	if !ver {
 		log.Println("Invalid Authentication")
 		return false
 	}
 
 	//Generate a response to the client
-	sr, _ := scrypt.Key(password, combSalt, 16384, 4, 7, 32)
+	sr, _ := scrypt.Key(password, combSalt, 16384, 4, 3, 32)
 	u.Conn.Write(sr)
 
 	//Read login flags
@@ -171,17 +172,14 @@ func (s *Server) Listen() {
 
 //Handles all incoming user commands
 func (s *Server) command(p Packet) {
-	cmd := extractCommand(string(p.Payload))
-	args := strings.Split(string(p.Payload), " ")
-	fmt.Println(cmd)
-	switch cmd {
+	args := strings.Split(string(p.Payload[1:]), " ")
+
+	switch args[0] {
 	case "accept":
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
 		} else {
 			s.PassHashes[args[1]] = s.regReqs[args[1]]
-			fmt.Printf("|%s|\n", args[1])
-			fmt.Println(s.regReqs[args[1]])
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList("users.f")
@@ -190,6 +188,15 @@ func (s *Server) command(p Packet) {
 		//User wishes to download a file
 		//So send it to em?
 		go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+	case "history":
+		count,_ := strconv.Atoi(args[1])
+		hist := s.messages.LastNEntries(count)
+		go func() {
+			u := s.users[p.Username]
+			for _,m := range hist {
+				u.Conn.Write(m.GetBytes())
+			}
+		}()
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -207,6 +214,7 @@ func (s *Server) MessageHandler() {
 			s.parse <- p
 		case TRegister:
 			s.regReqs[p.Username] = p.Payload
+			log.Printf("sending out reg request for %s\n",p.Username)
 			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
 			s.parse <- p
 		case TCommand:
@@ -214,10 +222,10 @@ func (s *Server) MessageHandler() {
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
-			fmt.Printf("User %s wants to upload %s.\n", p.Username, fname)
+			log.Printf("User %s wants to upload %s.\n", p.Username, fname)
 			nblocks := ReadInt32(buf)
-			buf.ReadByte()
-			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks))}
+			flags,_ := buf.ReadByte()
+			s.uplFiles[fname] = &File{fname, nblocks, make([]*block, uint32(nblocks)), flags}
 		case TFile:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
@@ -225,13 +233,13 @@ func (s *Server) MessageHandler() {
 			nbytes := ReadInt32(buf)
 			blck := NewBlock(int(nbytes))
 			buf.Read(blck.data)
-			//fmt.Printf("Received data: %s\n", string(blck.data))
 			s.uplFiles[fname].data[packID] = blck
 			if s.uplFiles[fname].IsComplete() {
-				np := NewPacket(1,[]byte(fmt.Sprintf("New File Available: %s\n",fname)))
-				np.Username = "Server"
+				np := NewPacket(1,"Server",[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
 				s.parse <- np
 			}
+		case TPeerRequest:
+			s.SendBridgeInfoToUser(string(p.Payload), p.Username)
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}
@@ -241,15 +249,15 @@ func (s *Server) MessageHandler() {
 //This includes names of online users and the list of files available for download
 func (s *Server) SendServerInfo() {
 	buf := new(bytes.Buffer)
-	buf.Write(BytesFromInt32(int32(len(s.users))))
+	buf.Write(WriteInt32(int32(len(s.users))))
 	for k,_ := range s.users {
 		buf.Write(BytesFromShortString(k))
 	}
-	buf.Write(BytesFromInt32(int32(len(s.uplFiles))))
+	buf.Write(WriteInt32(int32(len(s.uplFiles))))
 	for k,_ := range s.uplFiles {
 		buf.Write(BytesFromShortString(k))
 	}
-	s.parse <- NewPacket(TServerInfo, buf.Bytes())
+	s.parse <- NewPacket(TServerInfo,"Server", buf.Bytes())
 }
 
 //Receives and parses packets and then sends them to each connection in the list
@@ -271,21 +279,33 @@ func (s *Server) MessageWriter() {
 	}
 }
 
+//Send information about user 'from' to user 'to' to allow them to create a
+//peer to peer connection
+func (s *Server) SendBridgeInfoToUser(from, to string) {
+	str := s.users[from].Conn.RemoteAddr().String()
+	go func() {
+		s.users[to].Conn.Write(NewPacket(TPeerInfo, "",[]byte(str)).GetBytes())
+	}()
+}
+
+//Send 'file' the the specified user by first sending a file info chunk
+//and then a number of data chunks of size 'BlockSize'
 func (s *Server) SendFileToUser(file *File, username string) error {
 	uc := s.users[username]
 	if uc == nil {
 		return errors.New("User does not exist.")
 	}
-	uc.Conn.Write(NewPacket(TFileInfo, file.getInfo()).GetBytes())
+	uc.Conn.Write(NewPacket(TFileInfo, "",file.getInfo()).GetBytes())
 	for i := 0; i < len(file.data); i++ {
-		uc.Conn.Write(NewPacket(TFile, file.getBytesForBlock(i)).GetBytes())
+		p := NewPacket(TFile,"", file.getBytesForBlock(i))
+		uc.Conn.Write(p.GetBytes())
 		time.Sleep(time.Millisecond * 2)
 	}
 	//Wait two milliseconds between sendings
 	return nil
 }
 
-//Loads list of user
+//Loads the list of users that have accounts on the server
 func (s *Server) loadUserList(filename string) {
 	f, _ := os.Open(filename)
 	for {
@@ -293,6 +313,8 @@ func (s *Server) loadUserList(filename string) {
 		if err != nil {
 			break
 		}
+		//perm := make([]byte,1)
+		//f.Read(perm)
 		phash := make([]byte, 32)
 		f.Read(phash)
 		s.PassHashes[uname] = phash
@@ -303,6 +325,7 @@ func (s *Server) saveUserList(filename string) {
 	wrbuf := new(bytes.Buffer)
 	for name, phash := range s.PassHashes {
 		wrbuf.Write(BytesFromShortString(name))
+		//wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
 	}
 	f, _ := os.Create(filename)
