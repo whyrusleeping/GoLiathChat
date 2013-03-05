@@ -177,7 +177,7 @@ func (h *Host) readMessages() {
 			}
 		case TPeerInfo:
 			//attempt to make a connection to the peer
-			//This may require NAT traversal and other ugly things.. bleh
+			//This will require NAT traversal and other ugly things.. bleh
 
 			//For now, just attempt a TCP connection
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code.

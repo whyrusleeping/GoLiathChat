@@ -19,9 +19,9 @@ import (
 
 type Server struct {
 	regReqs    map[string][]byte
-	PassHashes map[string][]byte //TODO: make lock for this map
+	PassHashes map[string][]byte
 	PHlock	   sync.RWMutex
-	users      map[string]*User //TODO: this one too, and probably uplFiles
+	users      map[string]*User
 	UserLock   sync.RWMutex
 	uplFiles   map[string]*File
 	listener   net.Listener
@@ -109,6 +109,7 @@ func (s *Server) AuthUser(u *User) bool {
 	unamebuf := bufPool.GetBuffer(int(ulen))
 	u.Conn.Read(unamebuf)
 	u.Username = string(unamebuf)
+	u.Nickname = u.Username
 	bufPool.Free(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", u.Username)
 	s.PHlock.RLock()
@@ -285,7 +286,7 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		b := p.GetBytes()
-		s.UserLock.Lock()
+		s.UserLock.RLock()
 		for uname, u := range s.users {
 			if !u.connected {
 				go func() {
@@ -300,6 +301,7 @@ func (s *Server) MessageWriter() {
 				}
 			}
 		}
+		s.UserLock.RUnlock()
 	}
 }
 

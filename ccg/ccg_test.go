@@ -2,6 +2,7 @@ package ccg
 
 import (
 	"testing"
+	"io"
 	"bytes"
 	"math/rand"
 )
@@ -35,6 +36,30 @@ func TestInt32Stream(t *testing.T) {
 	ver := ReadInt32(buf)
 	if num != ver {
 		t.Fail()
+	}
+}
+
+func ReadInt32Alt(c io.Reader) int32 {
+	buf := make([]byte,4)
+	r := int32(buf[0])
+	r += int32(buf[1]) << 8
+	r += int32(buf[2]) << 16
+	r += int32(buf[3]) << 24
+	return r
+}
+
+func BenchmarkEntireIntParse(b *testing.B) {
+	str := new(bytes.Buffer)
+	for i := 0; i < b.N; i++ {
+		str.Write(WriteInt32(rand.Int31n(10e8)))
+		ReadInt32Alt(str)
+	}
+}
+func BenchmarkByteWiseIntParse(b *testing.B) {
+	str := new(bytes.Buffer)
+	for i := 0; i < b.N; i++ {
+		str.Write(WriteInt32(rand.Int31n(10e8)))
+		ReadInt32(str)
 	}
 }
 
