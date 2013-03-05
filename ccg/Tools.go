@@ -16,6 +16,7 @@ var bufPool4b = NewBufferPool(16)
 
 func ReadInt32(c io.Reader) int32 {
 	buf := bufPool4b.GetBuffer(4)
+	c.Read(buf)
 	r := int32(buf[0])
 	r += int32(buf[1]) << 8
 	r += int32(buf[2]) << 16
@@ -61,7 +62,7 @@ func ReadShortString(c io.Reader) (string, error) {
 	var r uint16
 	buf := bytes.NewBuffer(l)
 	binary.Read(buf, binary.LittleEndian, &r)
-	strbuf := bufPool.GetBuffer(r)
+	strbuf := bufPool.GetBuffer(int(r))
 	c.Read(strbuf)
 	str := string(strbuf)
 	bufPool.Free(strbuf)

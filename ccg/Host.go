@@ -20,7 +20,7 @@ const (
 type Host struct {
 	username	   string
 	conn           net.Conn
-	Writer, Reader chan Packet
+	Writer, Reader chan *Packet
 	cert           tls.Certificate
 	config         *tls.Config
 	filesLocal		map[string]*File
@@ -52,8 +52,8 @@ func (h *Host) Connect(hostname string) error {
 	}
 	h.conn = conn
 
-	h.Reader = make(chan Packet)
-	h.Writer = make(chan Packet)
+	h.Reader = make(chan *Packet)
+	h.Writer = make(chan *Packet)
 
 	return nil
 }
@@ -141,7 +141,7 @@ func (h *Host) readMessages() {
 		//No error, continue on!
 		switch p.Typ {
 		case TMessage:
-			h.messages.PushMessage(&p)
+			h.messages.PushMessage(p)
 			h.Reader <- p
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
@@ -182,7 +182,7 @@ func (h *Host) readMessages() {
 			//For now, just attempt a TCP connection
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code.
 		case THistory:
-			h.messages.AddEntryInOrder(&p)
+			h.messages.AddEntryInOrder(p)
 		default:
 			h.Reader <- p
 		}

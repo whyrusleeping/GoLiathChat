@@ -41,7 +41,7 @@ func (p Packet) GetBytes() []byte {
 	return buf.Bytes()
 }
 
-func ReadPacket(conn net.Conn) (Packet, error) {
+func ReadPacket(conn net.Conn) (*Packet, error) {
 	flagBuf := make([]byte, 1)
 	lenBuf := make([]byte, 2)
 	timeBuf := bufPool.GetBuffer(4)
@@ -51,7 +51,7 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	p := Packet{}
 	_, err := conn.Read(flagBuf)
 	if err != nil {
-		return p, err
+		return &p, err
 	}
 	p.Typ = flagBuf[0]
 	conn.Read(timeBuf)
@@ -72,15 +72,15 @@ func ReadPacket(conn net.Conn) (Packet, error) {
 	bufPool.Free(userBuf)
 	bufPool.Free(strBuf)
 	bufPool.Free(timeBuf)
-	return p, nil
+	return &p, nil
 }
 
 //Creates a new simple packet
-func NewPacket(mtype byte, username string, Payload []byte) Packet {
+func NewPacket(mtype byte, username string, Payload []byte) *Packet {
 	p := Packet{}
 	p.Typ = mtype
 	p.Timestamp = int32(time.Now().Unix())
 	p.Payload = Payload
 	p.Username = username
-	return p
+	return &p
 }

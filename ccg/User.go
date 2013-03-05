@@ -10,7 +10,7 @@ type User struct {
 	Username  string
 	Nickname  string
 	perms     byte
-	Outp      chan<- Packet
+	Outp      chan<- *Packet
 	connected bool
 }
 

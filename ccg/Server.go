@@ -3,7 +3,6 @@ package ccg
 import (
 	"bytes"
 	"code.google.com/p/go.crypto/scrypt"
-	"container/list"
 	"crypto/rand"
 	"crypto/tls"
 	"errors"
@@ -25,8 +24,8 @@ type Server struct {
 	UserLock   sync.RWMutex
 	uplFiles   map[string]*File
 	listener   net.Listener
-	com        chan Packet
-	parse      chan Packet
+	com        chan *Packet
+	parse      chan *Packet
 	messages   *MessageLog
 }
 
@@ -65,15 +64,15 @@ func StartServer() *Server {
 		sync.RWMutex{},
 		make(map[string]*File),
 		listener,
-		make(chan Packet, 10),   //Channel for incoming messages
-		make(chan Packet, 10), //Channel for parsed messages to be sent
+		make(chan *Packet, 10),   //Channel for incoming messages
+		make(chan *Packet, 10), //Channel for parsed messages to be sent
 		NewLog(64),
 	}
 	s.LoginPrompt()
 	return &s
 }
 
-func (s *Server) HandleUser(u *User, outp chan<- Packet) {
+func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 	log.Println("New connection!")
 	u.Outp = outp
 	checkByte := make([]byte, 1)
@@ -181,7 +180,7 @@ func (s *Server) Listen() {
 }
 
 //Handles all incoming user commands
-func (s *Server) command(p Packet) {
+func (s *Server) command(p *Packet) {
 	args := strings.Split(string(p.Payload[1:]), " ")
 
 	switch args[0] {
@@ -203,12 +202,21 @@ func (s *Server) command(p Packet) {
 	case "history":
 		count,_ := strconv.Atoi(args[1])
 		hist := s.messages.LastNEntries(count)
+		fmt.Println(s.messages.count)
 		s.UserLock.RLock()
 		u := s.users[p.Username]
 		s.UserLock.RUnlock()
 		go func() {
 			for _,m := range hist {
-				u.Conn.Write(m.GetBytes())
+				if m == nil {
+					log.Println("the message is null for some reason...")
+				} else {
+					fmt.Println(m)
+					m.Typ = THistory
+					temp := m.GetBytes()
+					fmt.Println(temp)
+				u.Conn.Write(temp)
+			}
 			}
 		}()
 	case "ninja":
@@ -223,12 +231,11 @@ func (s *Server) command(p Packet) {
 //Receives packets parsed from incoming users and 
 //Processes them, then sends them to be relayed
 func (s *Server) MessageHandler() {
-	messages := *list.New()
 	for {
 		p := <-s.com
 		switch p.Typ {
 		case TMessage:
-			messages.PushFront(p)
+			s.messages.PushMessage(p)
 			s.parse <- p
 		case TRegister:
 			s.regReqs[p.Username] = p.Payload

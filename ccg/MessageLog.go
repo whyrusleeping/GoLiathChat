@@ -10,12 +10,14 @@ func NewLog(initialSize int) *MessageLog {
 	return &l
 }
 
+//Add the given packet to the history list. Resize array if needed
 func (l *MessageLog) PushMessage(p *Packet) {
 	if l.count >= len(l.messages) {
 		newl := make([]*Packet, l.count * 2)
 		copy(newl, l.messages)
 		l.messages = newl
 	}
+	p.Typ = THistory
 	l.messages[l.count] = p
 	l.count++
 }
@@ -38,7 +40,7 @@ func (l *MessageLog) LastNEntries(n int) []*Packet {
 	if n > l.count {
 		n = l.count
 	}
-	return l.messages[l.count - n:]
+	return l.messages[l.count - n:l.count]
 }
 
 func (l *MessageLog) Clear() {
