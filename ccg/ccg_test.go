@@ -38,6 +38,35 @@ func TestInt32Stream(t *testing.T) {
 	}
 }
 
+func TestShortString(t *testing.T) {
+	testStr := "abcdefghijklmnopqrstuvwxyztesting testing testing"
+	buf := BytesFromShortString(testStr)
+	stream := new(bytes.Buffer)
+	stream.Write(buf)
+	g,_ := ReadShortString(stream)
+	if testStr != g {
+		t.Fatal("Strings did not match")
+	}
+}
+
+func TestPacketSerialization(t *testing.T) {
+	p := NewPacket(TMessage, "TestName", []byte("text and things to what where why how"))
+	buf := new(bytes.Buffer)
+	buf.Write(p.GetBytes())
+	np, err := ReadPacket(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := true
+	check = check && (p.Typ == np.Typ)
+	check = check && (p.Timestamp == np.Timestamp)
+	check = check && (p.Username == np.Username)
+	check = check && (string(p.Payload) == string(np.Payload))
+	if !check {
+		t.Fail()
+	}
+}
+
 func BenchmarkBufferPool(b *testing.B) {
 	bp := NewBufferPool(32)
 	for i := 0; i < b.N; i++ {

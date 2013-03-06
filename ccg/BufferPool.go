@@ -25,28 +25,6 @@ func (bp *BufferPool) Free(b []byte) {
 	}
 }
 
-/*func (bp *BufferPool) Free(b []byte) {
-	//add the buffer to the free pool
-	for i := 0; i < len(bp.open); i++ {
-		if bp.open[i] == nil {
-			if bp.emptyOnFree {
-				bp.open[i] = bp.placeHolder
-				go func() {
-					plc := i
-					b = b[:cap(b)]
-					for j := 0; j < len(b); j++ {
-						b[j] = 0
-					}
-					bp.open[plc] = b
-				}()
-			} else {
-				bp.open[i] = b[:cap(b)]
-				return
-			}
-		}
-	}
-}*/
-
 
 func (bp *BufferPool) GetBuffer(size int) []byte{
 	//find a buffer with at least the given size
@@ -60,3 +38,7 @@ func (bp *BufferPool) GetBuffer(size int) []byte{
 	}
 	return make([]byte, size)
 }
+
+//Ideas
+//
+//Find a way to make this better at asynchronous stuff..

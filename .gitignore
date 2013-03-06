@@ -6,4 +6,3 @@ bin/*
 certs/*
 .tags
 example
-tests/*

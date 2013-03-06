@@ -3,8 +3,8 @@ package ccg
 import (
 	"bytes"
 	"encoding/binary"
-	"net"
 	"time"
+	"io"
 )
 
 const (
@@ -41,7 +41,7 @@ func (p Packet) GetBytes() []byte {
 	return buf.Bytes()
 }
 
-func ReadPacket(conn net.Conn) (Packet, error) {
+func ReadPacket(conn io.Reader) (Packet, error) {
 	flagBuf := make([]byte, 1)
 	lenBuf := make([]byte, 2)
 	timeBuf := bufPool.GetBuffer(4)
