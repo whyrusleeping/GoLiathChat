@@ -76,6 +76,13 @@ func ReadShortString(c io.Reader) (string, error) {
 	return string(str), nil
 }
 
+func ReadLongString(c io.Reader) ([]byte, error) {
+	r := ReadInt32(c)
+	str := make([]byte, r)
+	c.Read(str)
+	return str, nil
+}
+
 func BytesFromLongString(s string) []byte {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, uint32(len(s)))

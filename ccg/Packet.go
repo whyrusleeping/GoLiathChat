@@ -42,11 +42,7 @@ func (p Packet) GetBytes() []byte {
 }
 
 func ReadPacket(conn io.Reader) (Packet, error) {
-	flagBuf := make([]byte, 1)
-	lenBuf := make([]byte, 2)
-	timeBuf := bufPool.GetBuffer(4)
-	var userLen uint16
-	var payLen uint32
+	flagBuf := make([]byte,1)
 	//Need to check connectivity to see if a disconnect has happened
 	p := Packet{}
 	_, err := conn.Read(flagBuf)
@@ -54,24 +50,10 @@ func ReadPacket(conn io.Reader) (Packet, error) {
 		return p, err
 	}
 	p.Typ = flagBuf[0]
-	conn.Read(timeBuf)
-	buf := bytes.NewBuffer(timeBuf)
-	binary.Read(buf, binary.LittleEndian, &p.Timestamp)
-	conn.Read(lenBuf)
-	buf = bytes.NewBuffer(lenBuf)
-	binary.Read(buf, binary.LittleEndian, &userLen)
-	userBuf := bufPool.GetBuffer(int(userLen))
-	conn.Read(userBuf)
-	p.Username = string(userBuf)
-	conn.Read(timeBuf)
-	buf = bytes.NewBuffer(timeBuf)
-	binary.Read(buf, binary.LittleEndian, &payLen)
-	strBuf := bufPool.GetBuffer(int(payLen))
-	conn.Read(strBuf)
-	p.Payload = strBuf
-	bufPool.Free(userBuf)
-	bufPool.Free(strBuf)
-	bufPool.Free(timeBuf)
+	p.Timestamp = ReadInt32(conn)
+	p.Username,_ = ReadShortString(conn)
+	p.Payload,_ = ReadLongString(conn)
+
 	return p, nil
 }
 

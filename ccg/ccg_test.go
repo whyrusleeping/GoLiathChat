@@ -4,6 +4,7 @@ import (
 	"testing"
 	"bytes"
 	"math/rand"
+	"runtime"
 )
 
 func TestPasswordHash(t *testing.T) {
@@ -67,10 +68,44 @@ func TestPacketSerialization(t *testing.T) {
 	}
 }
 
+func TestAsyncBufferPool(t *testing.T) {
+	runtime.GOMAXPROCS(4)
+	//Fails occasionally with GOMAXPROCS > 1
+	bp := NewBufferPool(32)
+	t.Log("Starting")
+	rc := make(chan bool)
+	pass := true
+	for j := 0; j < 100; j++ {
+		go func() {
+			num := byte(j)
+			for i := 0; i < 50; i++ {
+				r := bp.GetBuffer(20 + rand.Intn(60))
+				for k := 0; k < len(r); k++ {
+					r[k] = num
+				}
+				for k := 0; k < len(r); k++ {
+					if r[k] != num {
+						pass = false
+					}
+				}
+
+				bp.Free(r)
+			}
+			rc <- true
+		}()
+	}
+	for j := 0; j < 100; j++ {
+		<-rc
+	}
+	if !pass {
+		t.Fail()
+	}
+}
+
 func BenchmarkBufferPool(b *testing.B) {
 	bp := NewBufferPool(32)
 	for i := 0; i < b.N; i++ {
-		a := bp.GetBuffer(2000 + rand.Intn(3000))
+		a := bp.GetBuffer(20000 + rand.Intn(30000))
 		//useBuffer(a)
 		a[3] = 6
 		bp.Free(a)
@@ -79,7 +114,7 @@ func BenchmarkBufferPool(b *testing.B) {
 
 func BenchmarkNonBufferPool(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		a := make([]byte, 2000 + rand.Intn(3000))
+		a := make([]byte, 20000 + rand.Intn(30000))
 		//useBuffer(a)
 		a[3] = 6
 	}
