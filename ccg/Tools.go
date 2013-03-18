@@ -12,27 +12,18 @@ import (
 //Awesome salt thanks to travis lane.
 var tSalt = "brownchocolatemoosecoffeelatte"
 
+var bufPool4b = NewBufferPool(16)
+
 func ReadInt32(c io.Reader) int32 {
-	tmp := make([]byte, 1)
-	r := int32(0)
-	c.Read(tmp)
-	r = int32(tmp[0])
-	c.Read(tmp)
-	r += int32(tmp[0]) << 8
-	c.Read(tmp)
-	r += int32(tmp[0]) << 16
-	c.Read(tmp)
-	r += int32(tmp[0]) << 24
+	buf := bufPool4b.GetBuffer(4)
+	c.Read(buf)
+	r := int32(buf[0])
+	r += int32(buf[1]) << 8
+	r += int32(buf[2]) << 16
+	r += int32(buf[3]) << 24
+	bufPool4b.Free(buf)
 	return r
 }
-
-/*
-func BytesFromInt32(i int32) []byte {
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, i)
-	return buf.Bytes()
-}
-*/
 
 func BytesToInt32(a []byte) int32 {
 	n := 0
@@ -71,9 +62,11 @@ func ReadShortString(c io.Reader) (string, error) {
 	var r uint16
 	buf := bytes.NewBuffer(l)
 	binary.Read(buf, binary.LittleEndian, &r)
-	str := make([]byte, r)
-	c.Read(str)
-	return string(str), nil
+	strbuf := bufPool.GetBuffer(int(r))
+	c.Read(strbuf)
+	str := string(strbuf)
+	bufPool.Free(strbuf)
+	return str, nil
 }
 
 func ReadLongString(c io.Reader) ([]byte, error) {

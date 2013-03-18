@@ -12,15 +12,15 @@ import (
 
 //Login Flags
 const (
-	fAnon      = 1 << 0
-	fInvisible = 1 << 1
+	fAnon      = 1 << iota
+	fInvisible
 )
 
 //Usage is simple, read messages from the Reader, and write to the Writer.
 type Host struct {
 	username	   string
 	conn           net.Conn
-	Writer, Reader chan Packet
+	Writer, Reader chan *Packet
 	cert           tls.Certificate
 	config         *tls.Config
 	filesLocal		map[string]*File
@@ -52,8 +52,8 @@ func (h *Host) Connect(hostname string) error {
 	}
 	h.conn = conn
 
-	h.Reader = make(chan Packet)
-	h.Writer = make(chan Packet)
+	h.Reader = make(chan *Packet)
+	h.Writer = make(chan *Packet)
 
 	return nil
 }
@@ -142,7 +142,7 @@ func (h *Host) readMessages() {
 		//No error, continue on!
 		switch p.Typ {
 		case TMessage:
-			h.messages.PushMessage(&p)
+			h.messages.PushMessage(p)
 			h.Reader <- p
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
@@ -178,12 +178,12 @@ func (h *Host) readMessages() {
 			}
 		case TPeerInfo:
 			//attempt to make a connection to the peer
-			//This may require NAT traversal and other ugly things.. bleh
+			//This will require NAT traversal and other ugly things.. bleh
 
 			//For now, just attempt a TCP connection
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code.
 		case THistory:
-			h.messages.AddEntryInOrder(&p)
+			h.messages.AddEntryInOrder(p)
 		default:
 			h.Reader <- p
 		}

@@ -3,7 +3,6 @@ package ccg
 import (
 	"bytes"
 	"code.google.com/p/go.crypto/scrypt"
-	"container/list"
 	"crypto/rand"
 	"crypto/tls"
 	"errors"
@@ -13,17 +12,20 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Server struct {
 	regReqs    map[string][]byte
 	PassHashes map[string][]byte
+	PHlock	   sync.RWMutex
 	users      map[string]*User
+	UserLock   sync.RWMutex
 	uplFiles   map[string]*File
 	listener   net.Listener
-	com        chan Packet
-	parse      chan Packet
+	com        chan *Packet
+	parse      chan *Packet
 	messages   *MessageLog
 }
 
@@ -57,25 +59,29 @@ func StartServer() *Server {
 	s := Server{
 		make(map[string][]byte),
 		make(map[string][]byte),
+		sync.RWMutex{},
 		make(map[string]*User),
+		sync.RWMutex{},
 		make(map[string]*File),
 		listener,
-		make(chan Packet, 10),   //Channel for incoming messages
-		make(chan Packet, 10), //Channel for parsed messages to be sent
+		make(chan *Packet, 10),   //Channel for incoming messages
+		make(chan *Packet, 10), //Channel for parsed messages to be sent
 		NewLog(64),
 	}
 	s.LoginPrompt()
 	return &s
 }
 
-func (s *Server) HandleUser(u *User, outp chan<- Packet) {
+func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 	log.Println("New connection!")
 	u.Outp = outp
 	checkByte := make([]byte, 1)
 	u.Conn.Read(checkByte)
 	if checkByte[0] == TLogin {
 		if s.AuthUser(u) {
+			s.UserLock.Lock()
 			s.users[u.Username] = u
+			s.UserLock.Unlock()
 			u.Listen()
 		} else {
 			u.Conn.Close()
@@ -102,13 +108,16 @@ func (s *Server) AuthUser(u *User) bool {
 	unamebuf := bufPool.GetBuffer(int(ulen))
 	u.Conn.Read(unamebuf)
 	u.Username = string(unamebuf)
+	u.Nickname = u.Username
 	bufPool.Free(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", u.Username)
-	if _, ok := s.PassHashes[u.Username]; !ok {
+	s.PHlock.RLock()
+	password, ok := s.PassHashes[u.Username]
+	s.PHlock.RUnlock()
+	if !ok {
 		log.Println("Not a registered user! Closing connection.")
 		return false
 	}
-	password := s.PassHashes[u.Username]
 
 	//Generate a challenge and send it to the server
 	sc := GeneratePepper()
@@ -171,7 +180,7 @@ func (s *Server) Listen() {
 }
 
 //Handles all incoming user commands
-func (s *Server) command(p Packet) {
+func (s *Server) command(p *Packet) {
 	args := strings.Split(string(p.Payload[1:]), " ")
 
 	switch args[0] {
@@ -179,7 +188,9 @@ func (s *Server) command(p Packet) {
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
 		} else {
+			s.PHlock.Lock()
 			s.PassHashes[args[1]] = s.regReqs[args[1]]
+			s.PHlock.Unlock()
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList("users.f")
@@ -191,16 +202,28 @@ func (s *Server) command(p Packet) {
 	case "history":
 		count,_ := strconv.Atoi(args[1])
 		hist := s.messages.LastNEntries(count)
+		fmt.Println(s.messages.count)
+		s.UserLock.RLock()
+		u := s.users[p.Username]
+		s.UserLock.RUnlock()
 		go func() {
-			u := s.users[p.Username]
 			for _,m := range hist {
-				u.Conn.Write(m.GetBytes())
+				if m == nil {
+					log.Println("the message is null for some reason...")
+				} else {
+					fmt.Println(m)
+					m.Typ = THistory
+					temp := m.GetBytes()
+					fmt.Println(temp)
+				u.Conn.Write(temp)
+			}
 			}
 		}()
 	case "names", "who":
-		go func() {
-			
-		}
+	case "ninja":
+		s.UserLock.Lock()
+		s.users[p.Username].Nickname = "Anon"
+		s.UserLock.Unlock()
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -209,12 +232,11 @@ func (s *Server) command(p Packet) {
 //Receives packets parsed from incoming users and 
 //Processes them, then sends them to be relayed
 func (s *Server) MessageHandler() {
-	messages := *list.New()
 	for {
 		p := <-s.com
 		switch p.Typ {
 		case TMessage:
-			messages.PushFront(p)
+			s.messages.PushMessage(p)
 			s.parse <- p
 		case TRegister:
 			s.regReqs[p.Username] = p.Payload
@@ -239,7 +261,7 @@ func (s *Server) MessageHandler() {
 			buf.Read(blck.data)
 			s.uplFiles[fname].data[packID] = blck
 			if s.uplFiles[fname].IsComplete() {
-				np := NewPacket(1,"Server",[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
+				np := NewPacket(TMessage,"Server",[]byte(fmt.Sprintf("New File Available: %s Size: <= %d\n",fname, BlockSize * s.uplFiles[fname].blocks)))
 				s.parse <- np
 			}
 		case TPeerRequest:
@@ -253,10 +275,12 @@ func (s *Server) MessageHandler() {
 //This includes names of online users and the list of files available for download
 func (s *Server) SendServerInfo() {
 	buf := new(bytes.Buffer)
+	s.UserLock.RLock()
 	buf.Write(WriteInt32(int32(len(s.users))))
 	for k,_ := range s.users {
 		buf.Write(BytesFromShortString(k))
 	}
+	s.UserLock.RUnlock()
 	buf.Write(WriteInt32(int32(len(s.uplFiles))))
 	for k,_ := range s.uplFiles {
 		buf.Write(BytesFromShortString(k))
@@ -270,9 +294,14 @@ func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
 		b := p.GetBytes()
+		s.UserLock.RLock()
 		for uname, u := range s.users {
 			if !u.connected {
+				go func() {
+				s.UserLock.Lock()
 				delete(s.users, uname)
+				s.UserLock.Unlock()
+			}()
 			} else {
 				_, err := u.Conn.Write(b)
 				if err != nil {
@@ -280,6 +309,7 @@ func (s *Server) MessageWriter() {
 				}
 			}
 		}
+		s.UserLock.RUnlock()
 	}
 }
 
@@ -327,11 +357,13 @@ func (s *Server) loadUserList(filename string) {
 
 func (s *Server) saveUserList(filename string) {
 	wrbuf := new(bytes.Buffer)
+	s.PHlock.RLock()
 	for name, phash := range s.PassHashes {
 		wrbuf.Write(BytesFromShortString(name))
 		//wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
 	}
+	s.PHlock.RUnlock()
 	f, _ := os.Create(filename)
 	_, err := f.Write(wrbuf.Bytes())
 	if err != nil {
