@@ -197,6 +197,10 @@ func (s *Server) command(p Packet) {
 				u.Conn.Write(m.GetBytes())
 			}
 		}()
+	case "names", "who":
+		go func() {
+			
+		}
 	default:
 		log.Println("Command unrecognized")
 	}

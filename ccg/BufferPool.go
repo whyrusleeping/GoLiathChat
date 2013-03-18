@@ -11,10 +11,11 @@ type BufferPool struct {
 
 func NewBufferPool(size int) *BufferPool {
 	bp := BufferPool{make([][]byte, size), false, make([]byte, 0),make(chan []byte)}
-	go bp.freeDaemon()
+	//go bp.freeDaemon()
 	return &bp
 }
 
+//NOT USED AS OF NOW
 func (bp *BufferPool) freeDaemon() {
 	for {
 		buff := <-bp.freeChan
@@ -29,15 +30,12 @@ func (bp *BufferPool) freeDaemon() {
 
 func (bp *BufferPool) Free(b []byte) {
 	//add the buffer to the free pool
-	go func() {bp.freeChan <- b}()
-	/*
 	for i := 0; i < len(bp.open); i++ {
 		if bp.open[i] == nil {
 			bp.open[i] = b[:cap(b)]
 			break
 		}
 	}
-	*/
 }
 
 

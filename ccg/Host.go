@@ -106,6 +106,7 @@ func (h *Host) writeMessages() {
 				}
 				rp := NewPacket(TMessage, "Notice", []byte(txt))
 				h.Reader <- rp
+				continue
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
