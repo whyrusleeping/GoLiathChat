@@ -220,6 +220,17 @@ func (s *Server) command(p *Packet) {
 			}
 		}()
 	case "names", "who":
+		s.UserLock.RLock()
+		var names string
+		for _, u := range s.users {
+			names += fmt.Sprintf("[%s]",u.Nickname)
+		}
+		ruser := s.users[p.Username]
+		s.UserLock.RUnlock()
+		go func() {
+			rp := NewPacket(TMessage, "Server", []byte(names))
+			ruser.Conn.Write(rp.GetBytes())
+		}()
 	case "ninja":
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
