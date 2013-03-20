@@ -181,7 +181,7 @@ func (h *Host) readMessages() {
 			//This will require NAT traversal and other ugly things.. bleh
 
 			//For now, just attempt a TCP connection
-			//Actually, just do nothing for now. Because doing nothing is better than crappy code.
+			//Actually, just do nothing for now. Because doing nothing is better than crappy code. FALSE
 		case THistory:
 			h.messages.AddEntryInOrder(p)
 		default:

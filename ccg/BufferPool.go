@@ -2,6 +2,8 @@ package ccg
 
 var bufPool = NewBufferPool(32)
 
+//A type to manage the recycling of byte arrays
+//currently (and most likely, always) not threadsafed
 type BufferPool struct {
 	open [][]byte
 	emptyOnFree bool

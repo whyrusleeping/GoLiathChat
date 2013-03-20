@@ -198,7 +198,11 @@ func (s *Server) command(p *Packet) {
 	case "dl":
 		//User wishes to download a file
 		//So send it to em?
-		go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+		if len(args) < 2 {
+			log.Println("No file specified.")
+		} else {
+			go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+		}
 	case "history":
 		count,_ := strconv.Atoi(args[1])
 		hist := s.messages.LastNEntries(count)
@@ -215,8 +219,8 @@ func (s *Server) command(p *Packet) {
 					m.Typ = THistory
 					temp := m.GetBytes()
 					fmt.Println(temp)
-				u.Conn.Write(temp)
-			}
+					u.Conn.Write(temp)
+				}
 			}
 		}()
 	case "names", "who":
@@ -309,10 +313,10 @@ func (s *Server) MessageWriter() {
 		for uname, u := range s.users {
 			if !u.connected {
 				go func() {
-				s.UserLock.Lock()
-				delete(s.users, uname)
-				s.UserLock.Unlock()
-			}()
+					s.UserLock.Lock()
+					delete(s.users, uname)
+					s.UserLock.Unlock()
+				}()
 			} else {
 				_, err := u.Conn.Write(b)
 				if err != nil {

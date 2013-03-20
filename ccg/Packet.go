@@ -32,12 +32,10 @@ type Packet struct {
 
 func (p Packet) GetBytes() []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, p.Typ)
-	binary.Write(buf, binary.LittleEndian, int32(p.Timestamp))
-	binary.Write(buf, binary.LittleEndian, uint16(len(p.Username)))
-	binary.Write(buf, binary.LittleEndian, []byte(p.Username))
-	binary.Write(buf, binary.LittleEndian, uint32(len(p.Payload)))
-	binary.Write(buf, binary.LittleEndian, p.Payload)
+	buf.WriteByte(p.Typ)
+	buf.Write(WriteInt32(int32(p.Timestamp)))
+	buf.Write(BytesFromShortString(p.Username))
+	buf.Write(BytesFromLongString(p.Payload))
 	return buf.Bytes()
 }
 
