@@ -17,7 +17,6 @@ func (l *MessageLog) PushMessage(p *Packet) {
 		copy(newl, l.messages)
 		l.messages = newl
 	}
-	p.Typ = THistory
 	l.messages[l.count] = p
 	l.count++
 }
