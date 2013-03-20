@@ -2,7 +2,6 @@ package ccg
 
 import (
 	"bytes"
-	"encoding/binary"
 	"time"
 	"io"
 )
@@ -35,7 +34,8 @@ func (p Packet) GetBytes() []byte {
 	buf.WriteByte(p.Typ)
 	buf.Write(WriteInt32(int32(p.Timestamp)))
 	buf.Write(BytesFromShortString(p.Username))
-	buf.Write(BytesFromLongString(p.Payload))
+	buf.Write(WriteInt32(int32(len(p.Payload))))
+	buf.Write(p.Payload)
 	return buf.Bytes()
 }
 
