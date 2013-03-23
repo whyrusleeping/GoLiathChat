@@ -3,6 +3,10 @@ package main
 import (
 	"./ccg"
 	"net"
+	"log"
+	"net/http"
+	"code.google.com/p/go.net/websocket"
+	"io/ioutil"
 )
 
 func ListenUI(c net.Conn, from chan []byte) {
@@ -26,6 +30,7 @@ func ServeUI(c net.Conn) {
 
 	//Get login info 
 	servName, _ := ccg.ReadLongString(c)
+	log.Println("Got hostname")
 	user,_ := ccg.ReadLongString(c)
 	pass,_ := ccg.ReadLongString(c)
 	flags := make([]byte, 1)
@@ -41,9 +46,9 @@ func ServeUI(c net.Conn) {
 	go ListenUI(c, fromUI)
 	go func() {
 		for {
-		p := <-serv.Reader
-		toUI <- p.GetBytes()
-	}
+			p := <-serv.Reader
+			toUI <- p.GetBytes()
+		}
 	}()
 
 	for {
@@ -66,6 +71,51 @@ func StartTCPInterface() {
 	ServeUI(ui)
 }
 
+func httpHandler(c http.ResponseWriter, req *http.Request) {
+	index, _ := ioutil.ReadFile("wstest.html")
+	c.Write(index)
+}
+
+func handleWebsocket(ws *websocket.Conn) {
+	log.Println("websocket connected")
+	//ServeUI(ws)
+	var host string
+	var username string
+	var password string
+	var message string
+
+	websocket.Message.Receive(ws, &host)
+	websocket.Message.Receive(ws, &username)
+	websocket.Message.Receive(ws, &password)
+
+	serv := ccg.NewHost()
+	err := serv.Connect(host)
+	if err != nil {
+		panic(err)
+	}
+	serv.Login(username, password, byte(0))
+	serv.Start()
+	websocket.Message.Send(ws, "Connection to chat server successful!")
+	go func() {
+		for {
+			websocket.Message.Receive(ws, &message)
+			log.Println(message)
+			serv.Send(message)
+		}
+	}()
+	for {
+		p := <-serv.Reader
+		websocket.Message.Send(ws, string(p.Username) + ": " +string(p.Payload))
+	}
+}
+
+func StartWebSockInterface() {
+	http.HandleFunc("/", httpHandler)
+	http.Handle("/ws", websocket.Handler(handleWebsocket))
+	http.ListenAndServe(":8080", nil)
+}
+
 func main() {
-	StartTCPInterface()
+	//StartTCPInterface()
+	StartWebSockInterface()
 }

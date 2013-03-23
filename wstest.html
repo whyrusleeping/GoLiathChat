@@ -1,0 +1,66 @@
+<!DOCTYPE html> 
+
+<meta charset="utf-8" /> 
+
+<title>Websocket Test</title>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+
+<script language="javascript" type="text/javascript">
+$(function() {
+ 
+
+    var conn;
+    var msg = $("#msg");
+    var log = $("#log");
+ 
+    function appendLog(msg) {
+		log.append("<p class='msg'>" + msg + "</p>")
+    }
+
+	$("#login").click(function() {
+			conn.send("127.0.0.1:10234");
+			conn.send("jeromy");
+			conn.send("password");
+
+		});
+
+    $("#form").submit(function() {
+        if (!conn) {
+            return false;
+        }
+        if (!msg.val()) {
+            return false;
+        }
+        conn.send(msg.val());
+        msg.val("");
+        return false
+    });
+
+	$("#textIn").keyup(function(event){
+			if(event.keyCode == 13) {
+					tb = $("#textIn")
+					conn.send(tb.val())
+					tb.val("")
+				}
+				});
+    if (window["WebSocket"]) {
+        conn = new WebSocket("ws://127.0.0.1:8080/ws");
+        conn.onclose = function(evt) {
+            appendLog("<div><b>Connection closed.</b></div>")
+        };
+        conn.onmessage = function(evt) {
+            appendLog(evt.data)
+		};
+    } else {
+        appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))
+    }
+	});
+
+</script>
+
+
+<h2>WebSocket Test</h2> 
+<div id="log"></div>
+<input type="text" id="textIn" />
+<input type="button" id="login" />
+ </html>
