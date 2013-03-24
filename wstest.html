@@ -1,66 +1,89 @@
-<!DOCTYPE html> 
+<html>
+	<head>
+		<title>Websocket Test</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+		<script language="javascript" type="text/javascript">
+			$(function() {
+					var conn;
+					var msg = $("#msg");
+					var log = $("#log");
+					var loginarea = $("#loginbox");
+					var chatarea = $("#chatarea");
+					var inpBox = $("#textIn");
 
-<meta charset="utf-8" /> 
+					function appendLog(msg) {
+					log.append("<p class='msg'>" + msg + "</p>")
+					}
 
-<title>Websocket Test</title>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+					$("#login").click(function() {
+						conn.send("127.0.0.1:10234");
+						conn.send("jeromy");
+						conn.send("password");
+						loginarea.hide();
+						chatarea.show();
+						chatarea.css('background','green');
+						});
 
-<script language="javascript" type="text/javascript">
-$(function() {
- 
+					$("#form").submit(function() {
+							if (!conn) {
+							return false;
+							}
+							if (!msg.val()) {
+							return false;
+							}
+							conn.send(msg.val());
+							msg.val("");
+							return false
+							});
 
-    var conn;
-    var msg = $("#msg");
-    var log = $("#log");
- 
-    function appendLog(msg) {
-		log.append("<p class='msg'>" + msg + "</p>")
-    }
+					$("#textIn").keyup(function(event){
+							if(event.keyCode == 13) {
+							tb = $("#textIn")
+							conn.send(tb.val())
+							tb.val("")
+							}
+							});
+					if (window["WebSocket"]) {
+						loginarea.css('height', '300px');
+						chatarea.hide();
 
-	$("#login").click(function() {
-			conn.send("127.0.0.1:10234");
-			conn.send("jeromy");
-			conn.send("password");
-
-		});
-
-    $("#form").submit(function() {
-        if (!conn) {
-            return false;
-        }
-        if (!msg.val()) {
-            return false;
-        }
-        conn.send(msg.val());
-        msg.val("");
-        return false
-    });
-
-	$("#textIn").keyup(function(event){
-			if(event.keyCode == 13) {
-					tb = $("#textIn")
-					conn.send(tb.val())
-					tb.val("")
-				}
-				});
-    if (window["WebSocket"]) {
-        conn = new WebSocket("ws://127.0.0.1:8080/ws");
-        conn.onclose = function(evt) {
-            appendLog("<div><b>Connection closed.</b></div>")
-        };
-        conn.onmessage = function(evt) {
-            appendLog(evt.data)
-		};
-    } else {
-        appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))
-    }
-	});
+						conn = new WebSocket("ws://127.0.0.1:8080/ws");
+						conn.onclose = function(evt) {
+							appendLog("<p><b>Connection closed.</b></p>")
+						};
+						conn.onmessage = function(evt) {
+							appendLog(evt.data)
+						};
+					} else {
+						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
+					}
+			});
 
 </script>
+<style media="screen" type="text/css">
+	#loginbox {
+		border:2px solid black;
+		overflow: hidden;
+	}
 
-
-<h2>WebSocket Test</h2> 
-<div id="log"></div>
-<input type="text" id="textIn" />
-<input type="button" id="login" />
- </html>
+	#chatarea {
+		border:2px solid black;
+		width: 960px;
+		margin-left: auto;
+		margin-right: auto;
+		overflow: hidden;
+		background: yellow;
+	}
+</style>
+	</head>
+	<body>
+		<h2>WebSocket Test</h2> 
+		<div id="loginbox">
+			<input type="button" id="login" />
+		</div>
+		<div id="chatarea">
+			<div id="log"></div>
+			<input type="text" id="textIn" />
+		</div>
+	</body>
+</html>
