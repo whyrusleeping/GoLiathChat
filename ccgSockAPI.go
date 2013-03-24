@@ -3,6 +3,7 @@ package main
 import (
 	"./ccg"
 	"log"
+	"net"
 	"net/http"
 	"code.google.com/p/go.net/websocket"
 	"io/ioutil"
@@ -26,13 +27,13 @@ func handleWebsocket(ws *websocket.Conn) {
 	websocket.Message.Receive(ws, &username)
 	websocket.Message.Receive(ws, &password)
 
-	password = "";
 	serv := ccg.NewHost()
 	err := serv.Connect(host)
 	if err != nil {
 		panic(err)
 	}
 	serv.Login(username, password, byte(0))
+	password = "";
 	serv.Start()
 	websocket.Message.Send(ws, "Connection to chat server successful!")
 
@@ -63,7 +64,23 @@ func StartWebSockInterface() {
 	http.ListenAndServe(":8080", nil)
 }
 
+func StartTCPInterface() {
+	log.Println("Starting listener...")
+	listen, err := net.Listen("tcp",":10236")
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Waiting for connection on UI Sock.")
+	conn, err := listen.Accept()
+	if err != nil {
+		panic(err)
+	}
+	log.Println("Connection Made!")
+	//Communicate or whatever
+	conn.Close()
+}
+
 func main() {
-	//StartTCPInterface()
+	go StartTCPInterface()
 	StartWebSockInterface()
 }
