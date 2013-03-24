@@ -2,7 +2,6 @@ package main
 
 import (
 	"./ccg"
-	"net"
 	"log"
 	"net/http"
 	"code.google.com/p/go.net/websocket"
@@ -27,6 +26,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	websocket.Message.Receive(ws, &username)
 	websocket.Message.Receive(ws, &password)
 
+	password = "";
 	serv := ccg.NewHost()
 	err := serv.Connect(host)
 	if err != nil {
@@ -39,7 +39,10 @@ func handleWebsocket(ws *websocket.Conn) {
 
 	go func() {
 		for {
-			websocket.Message.Receive(ws, &message)
+			err := websocket.Message.Receive(ws, &message)
+			if err != nil {
+				log.Panic(err)
+			}
 			if message != "" {
 				log.Println(message)
 				serv.Send(message)

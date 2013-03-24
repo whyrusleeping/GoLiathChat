@@ -16,11 +16,11 @@
 					}
 
 					$("#login").click(function() {
-						conn.send("127.0.0.1:10234");
-						conn.send("jeromy");
-						conn.send("password");
-						loginarea.hide();
-						chatarea.show();
+						conn.send($("#host").val());
+						conn.send($("#username").val());
+						conn.send($("#password").val());
+						loginarea.hide(500);
+						chatarea.show(500);
 						chatarea.css('background','green');
 						});
 
@@ -64,6 +64,9 @@
 	#loginbox {
 		border:2px solid black;
 		overflow: hidden;
+		width: 960px;
+		margin-left: auto;
+		margin-right: auto;
 	}
 
 	#chatarea {
@@ -72,14 +75,16 @@
 		margin-left: auto;
 		margin-right: auto;
 		overflow: hidden;
-		background: yellow;
 	}
 </style>
 	</head>
 	<body>
 		<h2>WebSocket Test</h2> 
 		<div id="loginbox">
-			<input type="button" id="login" />
+			<input type="text" id="host" /><br>
+			<input type="text" id="username" /><br>
+			<input type="password" id="password" /><br>
+			<input type="button" id="login" value="Login" />
 		</div>
 		<div id="chatarea">
 			<div id="log"></div>
