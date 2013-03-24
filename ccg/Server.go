@@ -225,7 +225,7 @@ func (s *Server) command(p *Packet) {
 		}()
 	case "names", "who":
 		s.UserLock.RLock()
-		var names string
+		names := "Users Online:\n"
 		for _, u := range s.users {
 			names += fmt.Sprintf("[%s]",u.Nickname)
 		}

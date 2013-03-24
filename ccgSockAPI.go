@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"code.google.com/p/go.net/websocket"
 	"io/ioutil"
+	"os"
 )
 
 
@@ -17,7 +18,6 @@ func httpHandler(c http.ResponseWriter, req *http.Request) {
 
 func handleWebsocket(ws *websocket.Conn) {
 	log.Println("websocket connected")
-	//ServeUI(ws)
 	var host string
 	var username string
 	var password string
@@ -30,19 +30,22 @@ func handleWebsocket(ws *websocket.Conn) {
 	serv := ccg.NewHost()
 	err := serv.Connect(host)
 	if err != nil {
-		panic(err)
+		log.Println("an error occurred during or before login.")
+		return
 	}
 	serv.Login(username, password, byte(0))
 	password = "";
 	serv.Start()
 	websocket.Message.Send(ws, "Connection to chat server successful!")
 
+	run := true
 
 	go func() {
-		for {
+		for run {
 			err := websocket.Message.Receive(ws, &message)
 			if err != nil {
-				log.Panic(err)
+				log.Println("UI Disconnected.")
+				run = false
 			}
 			if message != "" {
 				log.Println(message)
@@ -51,11 +54,12 @@ func handleWebsocket(ws *websocket.Conn) {
 			message = ""
 		}
 	}()
-	for {
+	for run {
 		p := <-serv.Reader
 		websocket.Message.Send(ws, string(p.Username) + ": " +string(p.Payload))
 		p = nil
 	}
+	os.Exit(0)
 }
 
 func StartWebSockInterface() {
