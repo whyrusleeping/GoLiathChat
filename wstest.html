@@ -1,29 +1,45 @@
+<!DOCTYPE html>
 <html>
-	<head>
-		<title>Websocket Test</title>
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-		<script language="javascript" type="text/javascript">
+<head>
+	<title>TITLE</title>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	  <script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+	  <link href="http://netdna.bootstrapcdn.com/bootswatch/2.3.1/slate/bootstrap.min.css" rel="stylesheet">
+		<script type="text/javascript">
 			$(function() {
 					var conn;
 					var msg = $("#msg");
-					var log = $("#log");
+					var log = $("#chatBackground");
 					var loginarea = $("#loginbox");
 					var chatarea = $("#chatarea");
-					var inpBox = $("#textIn");
+					var inpBox = $("#chatInput");
+					var regbox = $("#registerbox");
+					var iregbut = $("#registerButton");
+					var cancreg = $("#cancelRegisterButton");
 
 					function appendLog(msg) {
-					log.append("<p class='msg'>" + msg + "</p>")
+					log.append("<p class='msg'>" + msg + "</p>");
 					}
 
-					$("#login").click(function() {
-						conn.send($("#host").val());
-						conn.send($("#username").val());
-						conn.send($("#password").val());
+					function addMess(user, mess) {
+					log.append("<p class='msg'><b>"+user+"<br>"+mess+"</p>");
+					}
+					$("#loginButton").click(function() {
+						conn.send($("#inputServer").val());
+						conn.send($("#inputUsername").val());
+						conn.send($("#inputPassword").val());
 						loginarea.hide(500);
 						chatarea.show(500);
-						chatarea.css('background','green');
 						});
 
+					cancreg.click(function() {
+							regbox.hide(300);
+							loginarea.show(300);
+							});
+					iregbut.click(function() {
+								regbox.show(300);
+								loginarea.hide(300);
+							});
 					$("#form").submit(function() {
 							if (!conn) {
 							return false;
@@ -36,59 +52,127 @@
 							return false
 							});
 
-					$("#textIn").keyup(function(event){
+					inpBox.keyup(function(event){
 							if(event.keyCode == 13) {
-							tb = $("#textIn")
-							conn.send(tb.val())
-							tb.val("")
+							conn.send(inpBox.val());
+							inpBox.val("");
 							}
 							});
 					if (window["WebSocket"]) {
 						loginarea.css('height', '300px');
 						chatarea.hide();
+						regbox.hide();
 
 						conn = new WebSocket("ws://127.0.0.1:8080/ws");
 						conn.onclose = function(evt) {
 							appendLog("<p><b>Connection closed.</b></p>")
 						};
 						conn.onmessage = function(evt) {
-							appendLog(evt.data)
+
+							var char = ':';
+							var str = evt.data
+							var user = str.slice(0, str.indexOf(char))
+							var mess = str.slice(str.indexOf(char) + 1)
+							addMess(user, mess)
 						};
 					} else {
 						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
 					}
 			});
 
-</script>
-<style media="screen" type="text/css">
-	#loginbox {
-		border:2px solid black;
-		overflow: hidden;
-		width: 960px;
-		margin-left: auto;
-		margin-right: auto;
-	}
+		</script>
 
-	#chatarea {
-		border:2px solid black;
-		width: 960px;
-		margin-left: auto;
-		margin-right: auto;
-		overflow: hidden;
-	}
-</style>
-	</head>
-	<body>
-		<h2>WebSocket Test</h2> 
-		<div id="loginbox">
-			<input type="text" id="host" /><br>
-			<input type="text" id="username" /><br>
-			<input type="password" id="password" /><br>
-			<input type="button" id="login" value="Login" />
-		</div>
-		<div id="chatarea">
-			<div id="log"></div>
-			<input type="text" id="textIn" />
-		</div>
-	</body>
-</html>
+		<!--<script type="text/javascript">{{JS}}</script>--!>
+</head>
+<body>
+	<div id="loginbox" align="center">
+    <div class="control-group">
+      <label class="control-label" for="inputUsername">Username</label>
+      <div class="controls">
+        <input type="text" id="inputUsername" placeholder="Email">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputPassword">Password</label>
+      <div class="controls">
+        <input type="password" id="inputPassword" placeholder="Password">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="inputServer">Server</label>
+      <div class="controls">
+        <input type="text" id="inputServer" placeholder="Server IP">
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="controls">
+        <button id="loginButton" class="btn">Login </button>
+        <button id="registerButton" class="btn">Register </button>
+      </div>
+    </div>
+    
+    <div class="alert alert-error" id="loginUPError"style="visibility: hidden;">
+      <button type="button" class="close" data-dismiss="alert" visibility="hidden">&times;</button>
+      <strong>Login Error!</strong> Username or Password were incorrect.
+    </div>
+    <div class="alert alert-error" id="loginServerError"style="visibility: hidden;">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <strong>Server Error!</strong> Server not found.
+    </div>
+  </div>
+  <div id="registerbox" align="center">
+    <div class="control-group">
+      <label class="control-label" for="registerUsername">Username</label>
+      <div class="controls">
+        <input type="text" id="registerUsername" placeholder="Email">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="registerPassword">Password</label>
+      <div class="controls">
+        <input type="password" id="registerPassword" placeholder="Password">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="registerPasswordConfirm">Password</label>
+      <div class="controls">
+        <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="registerServer">Server</label>
+      <div class="controls">
+        <input type="text" id="registerServer" placeholder="Server IP">
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="controls">
+        <button type="submit" class="btn" id="submitRegisterButton">Register</button>
+        <button type="submit" class="btn" id="cancelRegisterButton">Cancel</button>
+      </div>
+    </div>
+    <div class="alert alert-error" style="visibility: hidden;"id="registerPassError">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <strong>Password Error!</strong> Passwords must be the same.
+    </div>
+    <div class="alert alert-error" id="registerServerError"style="visibility: hidden;">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <strong>Server Error!</strong> Server not found.
+    </div>
+    <div class="alert alert-error" id="registerUserError"style="visibility: hidden;">
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+      <strong>Username Registration Error!</strong> Username is already registered on this server.
+    </div>
+  </div>
+  <div id="chatarea" style="height:100%; width:100%;">
+    <div style="float:top; width:100%; height:70%; overflow:auto; padding:10px;" id="chatBackground">
+    </div>
+    <div class="control-group" style="padding-top:3px; float:bottom;" align="left">
+      <div class="controls">
+        <input style="min-width:95%; float:bottom;" type="text" id="chatInput" placeholder="">
+      </div>
+   </div>
+  
+  
+  </div>
+</body>

@@ -36,28 +36,28 @@ func handleWebsocket(ws *websocket.Conn) {
 	serv.Login(username, password, byte(0))
 	password = "";
 	serv.Start()
-	websocket.Message.Send(ws, "Connection to chat server successful!")
+	websocket.Message.Send(ws, "Notice:Connection to chat server successful!")
 
 	run := true
 
 	go func() {
 		for run {
-			err := websocket.Message.Receive(ws, &message)
-			if err != nil {
-				log.Println("UI Disconnected.")
-				run = false
-			}
-			if message != "" {
-				log.Println(message)
-				serv.Send(message)
-			}
-			message = ""
+			p := <-serv.Reader
+			websocket.Message.Send(ws, string(p.Username) + ": " +string(p.Payload))
+			p = nil
 		}
 	}()
 	for run {
-		p := <-serv.Reader
-		websocket.Message.Send(ws, string(p.Username) + ": " +string(p.Payload))
-		p = nil
+		err := websocket.Message.Receive(ws, &message)
+		if err != nil {
+			log.Println("UI Disconnected.")
+			run = false
+		}
+		if message != "" {
+			log.Println(message)
+			serv.Send(message)
+		}
+		message = ""
 	}
 	os.Exit(0)
 }
