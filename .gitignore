@@ -1,8 +1,8 @@
 *.orig
 *.swp
 users.f
-bin/*
+*/bin/*
 
-certs/*
+*/certs/*
 .tags
 example
