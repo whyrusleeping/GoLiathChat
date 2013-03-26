@@ -204,7 +204,10 @@ func (s *Server) command(p *Packet) {
 			go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
 		}
 	case "history":
-		count,_ := strconv.Atoi(args[1])
+		count := 20
+		if len(args) >= 2 {
+			count,_ = strconv.Atoi(args[1])
+		}
 		hist := s.messages.LastNEntries(count)
 		fmt.Println(s.messages.count)
 		s.UserLock.RLock()
