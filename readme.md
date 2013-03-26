@@ -1,5 +1,7 @@
-#Go Commandline Chat
+#GoLiath Chat
 
+	So small that its a big deal!
+	
 GoLiath chat is a simple server-client chat system with 
 login and verification implemented in go.
 
