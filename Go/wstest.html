@@ -23,6 +23,9 @@
 					function addMess(user, mess) {
 					log.append("<p class='msg'><b>"+user+"<br>"+mess+"</p>");
 					}
+					$("html").resize(function() {
+							log.height(html.height() - inpBox.height())
+						});
 					$("#loginButton").click(function() {
 						conn.send("login");
 						conn.send($("#inputServer").val());
@@ -71,16 +74,17 @@
 
 							var char = ':';
 							var str = evt.data;
-							var user = str.slice(0, str.indexOf(char))
-								var mess = str.slice(str.indexOf(char) + 1)
-								addMess(user, mess)
+							var user = str.slice(0, str.indexOf(char));
+							var mess = str.slice(str.indexOf(char) + 1);
+							addMess(user, mess);
+							log.scrollTop(log.height())
 						};
 					} else {
 						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
 					}
 			});
 
-		</script>
+</script>
 
 	</head>
 	<body style="height:100%;">
