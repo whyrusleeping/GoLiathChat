@@ -1,14 +1,21 @@
-all: dir client server tbexample
+all: all-release
 
-dir:
-	test -d bin || mkdir bin
+all-debug: makeGo-debug makeWebkit-debug makeConsole-debug
+all-release: makeGo-release makeWebkit-release makeConsole-release
 
-client: 
-	go build -o bin/client ccgClient.go
+makeGo-debug:
+	cd Go; make all
 
-server:
-	go build -o bin/server ccgServer.go
+makeGo-release: makeGo-debug
 
-tbexample:
-	go build -o bin/example example.go
+makeWebkit-debug:
+	cd WebkitUI/src; qmake "CONFIG+=debug" GoChat_QtUI.pro; make
+
+makeWebkit-release:
+	cd WebkitUI/src; qmake "CONFIG+=release" GoChat_QtUI.pro; make
+
+makeConsole-debug:
+
+makeConsole-release:
+
 

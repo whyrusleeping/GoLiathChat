@@ -1,0 +1,6 @@
+[submodule "WebkitUI"]
+	path = WebkitUI
+	url = https://github.com/TLane/QtWebkitUI.git
+[submodule "ConsoleUI"]
+	path = ConsoleUI
+	url = https://github.com/TLane/ConsoleUI.git
