@@ -22,11 +22,14 @@ func handleWebsocket(ws *websocket.Conn) {
 	var username string
 	var password string
 	var message string
+	var contype string
 
-	websocket.Message.Receive(ws, &host)
-	websocket.Message.Receive(ws, &username)
-	websocket.Message.Receive(ws, &password)
-
+	websocket.Message.Receive(ws, &contype)
+	if contype == "login" {
+		websocket.Message.Receive(ws, &host)
+		websocket.Message.Receive(ws, &username)
+		websocket.Message.Receive(ws, &password)
+	}
 	serv := ccg.NewHost()
 	err := serv.Connect(host)
 	if err != nil {
