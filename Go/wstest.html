@@ -15,6 +15,7 @@
 					var regbox = $("#registerbox");
 					var iregbut = $("#registerButton");
 					var cancreg = $("#cancelRegisterButton");
+					var doregbut = $("#submitRegisterButton");
 
 					function appendLog(msg) {
 					log.append("<p class='msg'>" + msg + "</p>");
@@ -25,7 +26,21 @@
 					}
 					$("html").resize(function() {
 							log.height(html.height() - inpBox.height())
-						});
+							});
+					doregbut.click(function() {
+							var pass = $("registerPassword").val();
+							if (pass != $("registerPasswordConfirm").val() ){
+								alert("passwords do not match.");
+								} else {								
+							conn.send("register");
+							conn.send($("registerServer").val());
+							conn.send($("registerUsername").val());
+							conn.send(pass);
+							alert("Registration request sent!");
+							regbox.hide(500);
+							loginarea.show(500);
+							}
+							});
 					$("#loginButton").click(function() {
 						conn.send("login");
 						conn.send($("#inputServer").val());
