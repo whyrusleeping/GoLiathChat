@@ -31,13 +31,12 @@
 					doregbut.click(function() {
 							var pass = $("#registerPassword").val();
 							if (pass != $("#registerPasswordConfirm").val() ){
-								alert("passwords do not match.");
+							conn.send(pass);
 								} else {								
 							conn.send("register");
 							conn.send($("#registerServer").val());
 							conn.send($("#registerUsername").val());
-							conn.send(pass);
-							alert("Registration request sent!");
+							$("#registerPassError").show(200);
 							regbox.hide(500);
 							loginarea.show(500);
 							state = 3;
@@ -48,6 +47,7 @@
 						conn.send($("#inputServer").val());
 						conn.send($("#inputUsername").val());
 						conn.send($("#inputPassword").val());
+						$("#MessBox").html("<p><b>Attempting Login...</b></p>");
 						state = 3
 						});
 
@@ -94,12 +94,15 @@
 									chatarea.show(500);
 								} else if (evt.data == "NO") {
 									state = 4;
+									return;
 								}
 								state = 0;
 								return;
 							}
 							if (state == 4) {
 								//evt.data is the reason for the login failure
+								$("#MessBox").html("<p><b>"+evt.data+"</b></p>");
+								state = 0;
 								return;
 							}
 							var char = ':';
@@ -151,6 +154,8 @@
 					<button id="registerButton" class="btn">Register </button>
 				</div>
 			</div>
+			<div id="MessBox">
+			</div>
 			<div class="alert alert-error" id="loginUPError"style="visibility: hidden;">
 				<button type="button" class="close" data-dismiss="alert" visibility="hidden">&times;</button>
 				<strong>Login Error!</strong> Username or Password were incorrect.
@@ -191,15 +196,15 @@
 					<button type="submit" class="btn" id="cancelRegisterButton">Cancel</button>
 				</div>
 			</div>
-			<div class="alert alert-error" style="visibility: hidden;"id="registerPassError">
+			<div class="alert alert-error" id="registerPassError">
 				<button type="button" class="close" data-dismiss="alert">&times;</button>
 				<strong>Password Error!</strong> Passwords must be the same.
 			</div>
-			<div class="alert alert-error" id="registerServerError"style="visibility: hidden;">
+			<div class="alert alert-error" id="registerServerError">
 				<button type="button" class="close" data-dismiss="alert">&times;</button>
 				<strong>Server Error!</strong> Server not found.
 			</div>
-			<div class="alert alert-error" id="registerUserError"style="visibility: hidden;">
+			<div class="alert alert-error" id="registerUserError">
 				<button type="button" class="close" data-dismiss="alert">&times;</button>
 				<strong>Username Registration Error!</strong> Username is already registered on this server.
 			</div>

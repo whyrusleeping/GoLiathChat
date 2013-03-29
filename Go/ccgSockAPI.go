@@ -12,7 +12,7 @@ import (
 
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
-	index, _ := ioutil.ReadFile("wstest.html")
+	index, _ := ioutil.ReadFile("index.html")
 	c.Write(index)
 }
 
@@ -29,7 +29,11 @@ func handleWebsocket(ws *websocket.Conn) {
 	inf := "Reading Input"
 	for success == false {
 		log.Println(inf)
-		websocket.Message.Receive(ws, &contype)
+		err := websocket.Message.Receive(ws, &contype)
+		if err != nil {
+			log.Println("Error reading from websocket.")
+			return
+		}
 		log.Println(contype)
 		websocket.Message.Receive(ws, &host)
 		log.Println(host)
@@ -37,11 +41,12 @@ func handleWebsocket(ws *websocket.Conn) {
 		log.Println(username)
 		websocket.Message.Receive(ws, &password)
 		log.Println(password)
-		err := serv.Connect(host)
+		err = serv.Connect(host)
 		if err != nil {
 			log.Println("Could not connect to remote host.")
 			log.Println(err)
-			return
+			inf = "Could not connect to remote host."
+			contype = ""
 		}
 		if contype == "login" {
 			success, inf = serv.Login(username, password, byte(0))
@@ -89,23 +94,6 @@ func StartWebSockInterface() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func StartTCPInterface() {
-	log.Println("Starting listener...")
-	listen, err := net.Listen("tcp",":10236")
-	if err != nil {
-		panic(err)
-	}
-	log.Println("Waiting for connection on UI Sock.")
-	conn, err := listen.Accept()
-	if err != nil {
-		panic(err)
-	}
-	log.Println("Connection Made!")
-	//Communicate or whatever
-	conn.Close()
-}
-
 func main() {
-	go StartTCPInterface()
 	StartWebSockInterface()
 }
