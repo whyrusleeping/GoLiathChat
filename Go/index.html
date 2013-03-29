@@ -25,9 +25,6 @@
 					function addMess(user, mess) {
 					log.append("<div class='msg'><b>"+user+"</b><br><p class='ms'>"+mess+"</p></div>");
 					}
-					$("html").resize(function() {
-							log.height(html.height() - inpBox.height())
-							});
 					doregbut.click(function() {
 							var pass = $("#registerPassword").val();
 							if (pass != $("#registerPasswordConfirm").val() ){
@@ -59,17 +56,6 @@
 							regbox.show(300);
 							loginarea.hide(300);
 							});
-					$("#form").submit(function() {
-							if (!conn) {
-							return false;
-							}
-							if (!msg.val()) {
-							return false;
-							}
-							conn.send(msg.val());
-							msg.val("");
-							return false
-							});
 
 					inpBox.keyup(function(event){
 							if(event.keyCode == 13) {
@@ -78,7 +64,6 @@
 							}
 							});
 					if (window["WebSocket"]) {
-						loginarea.css('height', '300px');
 						chatarea.hide();
 						regbox.hide();
 
@@ -210,7 +195,7 @@
 			</div>
 		</div>
 		<div id="chatarea" style="height:100%; width:95%; position: relative;">
-			<div style="width:100%; height:70%; overflow:auto; padding:10px;" id="chatBackground">
+			<div style="width:100%; position:absolute; top:0; bottom:45px; overflow:auto; padding:10px;" id="chatBackground">
 			</div>
 			<input style="min-width:90%; position:absolute; bottom:0; left:5px;" type="text" id="chatInput" />
 		</div>

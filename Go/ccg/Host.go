@@ -184,6 +184,7 @@ func (h *Host) readMessages() {
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code. FALSE
 		case THistory:
 			h.messages.AddEntryInOrder(p)
+			h.Reader <- p
 		default:
 			h.Reader <- p
 		}

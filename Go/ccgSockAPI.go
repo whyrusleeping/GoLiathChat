@@ -3,7 +3,6 @@ package main
 import (
 	"./ccg"
 	"log"
-	"net"
 	"net/http"
 	"code.google.com/p/go.net/websocket"
 	"io/ioutil"
@@ -28,19 +27,14 @@ func handleWebsocket(ws *websocket.Conn) {
 	success := false
 	inf := "Reading Input"
 	for success == false {
-		log.Println(inf)
 		err := websocket.Message.Receive(ws, &contype)
 		if err != nil {
 			log.Println("Error reading from websocket.")
 			return
 		}
-		log.Println(contype)
 		websocket.Message.Receive(ws, &host)
-		log.Println(host)
 		websocket.Message.Receive(ws, &username)
-		log.Println(username)
 		websocket.Message.Receive(ws, &password)
-		log.Println(password)
 		err = serv.Connect(host)
 		if err != nil {
 			log.Println("Could not connect to remote host.")
@@ -48,22 +42,28 @@ func handleWebsocket(ws *websocket.Conn) {
 			inf = "Could not connect to remote host."
 			contype = ""
 		}
+
+		//Do login
 		if contype == "login" {
 			success, inf = serv.Login(username, password, byte(0))
 			password = "";
 		} else if contype == "register" {
+			//Do registration
 			serv.Register(username, password)
 		}
+
+		//If event of a failure, send the reason to the client
 		if !success {
 			websocket.Message.Send(ws, "NO")
 			websocket.Message.Send(ws, inf)
 		}
+		contype = ""
 	}
 	websocket.Message.Send(ws,"YES")
 	log.Println("Authenticated")
 	serv.Start()
 	websocket.Message.Send(ws, "Notice:Connection to chat server successful!")
-
+	serv.Send("/history 200")
 	run := true
 
 	go func() {
@@ -78,6 +78,10 @@ func handleWebsocket(ws *websocket.Conn) {
 		if err != nil {
 			log.Println("UI Disconnected.")
 			run = false
+		}
+		if len(message) > 8 && message[0] == '/' && message[:8] == "/history" {
+			//Explanation: For now, history is going to be a one time request on connection (at least for this client for now)
+			continue
 		}
 		if message != "" {
 			log.Println(message)
