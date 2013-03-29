@@ -24,20 +24,33 @@ func handleWebsocket(ws *websocket.Conn) {
 	var message string
 	var contype string
 
-	websocket.Message.Receive(ws, &contype)
-	if contype == "login" {
+	serv := ccg.NewHost()
+	success := false
+	inf := "Reading Input"
+	for success == false {
+		log.Println(inf)
+		websocket.Message.Receive(ws, &contype)
 		websocket.Message.Receive(ws, &host)
 		websocket.Message.Receive(ws, &username)
 		websocket.Message.Receive(ws, &password)
+		err := serv.Connect(host)
+		if err != nil {
+			log.Println("an error occurred during or before login.")
+			return
+		}
+		if contype == "login" {
+			success, inf = serv.Login(username, password, byte(0))
+			password = "";
+		} else if contype == "register" {
+			serv.Register(username, password)
+		}
+		if !success {
+			websocket.Message.Send(ws, "NO")
+			websocket.Message.Send(ws, inf)
+		}
 	}
-	serv := ccg.NewHost()
-	err := serv.Connect(host)
-	if err != nil {
-		log.Println("an error occurred during or before login.")
-		return
-	}
-	serv.Login(username, password, byte(0))
-	password = "";
+	websocket.Message.Send(ws,"YES")
+	log.Println("Authenticated")
 	serv.Start()
 	websocket.Message.Send(ws, "Notice:Connection to chat server successful!")
 
@@ -46,7 +59,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	go func() {
 		for run {
 			p := <-serv.Reader
-			websocket.Message.Send(ws, string(p.Username) + ": " +string(p.Payload))
+			websocket.Message.Send(ws, string(p.Username) + ":" +string(p.Payload))
 			p = nil
 		}
 	}()

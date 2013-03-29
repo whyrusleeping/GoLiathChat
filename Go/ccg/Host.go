@@ -229,7 +229,10 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	sr := make([]byte, 32)
 
 	//Read the servers response
-	h.conn.Read(sr)
+	_, err := h.conn.Read(sr)
+	if err != nil {
+		return false, "Auth Failed."
+	}
 	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 3, 32)
 
 	//and ensure that it is correct
