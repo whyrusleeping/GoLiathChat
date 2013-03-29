@@ -16,29 +16,31 @@
 					var iregbut = $("#registerButton");
 					var cancreg = $("#cancelRegisterButton");
 					var doregbut = $("#submitRegisterButton");
+					var state = 0;
 
 					function appendLog(msg) {
 					log.append("<p class='msg'>" + msg + "</p>");
 					}
 
 					function addMess(user, mess) {
-					log.append("<p class='msg'><b>"+user+"<br>"+mess+"</p>");
+					log.append("<div class='msg'><b>"+user+"</b><br><p class='ms'>"+mess+"</p></div>");
 					}
 					$("html").resize(function() {
 							log.height(html.height() - inpBox.height())
 							});
 					doregbut.click(function() {
-							var pass = $("registerPassword").val();
-							if (pass != $("registerPasswordConfirm").val() ){
+							var pass = $("#registerPassword").val();
+							if (pass != $("#registerPasswordConfirm").val() ){
 								alert("passwords do not match.");
 								} else {								
 							conn.send("register");
-							conn.send($("registerServer").val());
-							conn.send($("registerUsername").val());
+							conn.send($("#registerServer").val());
+							conn.send($("#registerUsername").val());
 							conn.send(pass);
 							alert("Registration request sent!");
 							regbox.hide(500);
 							loginarea.show(500);
+							state = 3;
 							}
 							});
 					$("#loginButton").click(function() {
@@ -46,8 +48,7 @@
 						conn.send($("#inputServer").val());
 						conn.send($("#inputUsername").val());
 						conn.send($("#inputPassword").val());
-						loginarea.hide(500);
-						chatarea.show(500);
+						state = 3
 						});
 
 					cancreg.click(function() {
@@ -86,7 +87,21 @@
 							appendLog("<p><b>Connection closed.</b></p>")
 						};
 						conn.onmessage = function(evt) {
-
+							if (state == 3) {
+								if (evt.data == "YES") {
+									//Show chat window
+									loginarea.hide(500);
+									chatarea.show(500);
+								} else if (evt.data == "NO") {
+									state = 4;
+								}
+								state = 0;
+								return;
+							}
+							if (state == 4) {
+								//evt.data is the reason for the login failure
+								return;
+							}
 							var char = ':';
 							var str = evt.data;
 							var user = str.slice(0, str.indexOf(char));
@@ -100,7 +115,15 @@
 			});
 
 </script>
-
+<style media="all" type="text/css">
+	.msg b {
+		color: black;
+	}
+	.ms {
+		color: white;
+		margin-left:20px;
+	}
+</style>
 	</head>
 	<body style="height:100%;">
 		<div id="loginbox" align="center">

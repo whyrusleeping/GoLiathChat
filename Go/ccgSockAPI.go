@@ -30,12 +30,17 @@ func handleWebsocket(ws *websocket.Conn) {
 	for success == false {
 		log.Println(inf)
 		websocket.Message.Receive(ws, &contype)
+		log.Println(contype)
 		websocket.Message.Receive(ws, &host)
+		log.Println(host)
 		websocket.Message.Receive(ws, &username)
+		log.Println(username)
 		websocket.Message.Receive(ws, &password)
+		log.Println(password)
 		err := serv.Connect(host)
 		if err != nil {
-			log.Println("an error occurred during or before login.")
+			log.Println("Could not connect to remote host.")
+			log.Println(err)
 			return
 		}
 		if contype == "login" {
