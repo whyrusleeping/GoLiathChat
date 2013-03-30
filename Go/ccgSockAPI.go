@@ -7,11 +7,13 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
+var pathToIndex string
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
-	index, _ := ioutil.ReadFile("index.html")
+	index, _ := ioutil.ReadFile(pathToIndex)
 	c.Write(index)
 }
 
@@ -99,5 +101,7 @@ func StartWebSockInterface() {
 }
 
 func main() {
+	pathToIndex = strings.Replace(os.Args[0], "apicli", "index.html",1)
+	log.Println(pathToIndex)
 	StartWebSockInterface()
 }

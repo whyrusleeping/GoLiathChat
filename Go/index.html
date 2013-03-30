@@ -18,13 +18,20 @@
 					var doregbut = $("#submitRegisterButton");
 					var state = 0;
 					var lockToBottom = true;
+					var myUsername;
 
 					function appendLog(msg) {
 					log.append("<p class='msg'>" + msg + "</p>");
 					}
 
 					function addMess(user, mess) {
-					log.append("<div class='msg'><b>"+user+"</b><br><p class='ms'>"+mess+"</p></div>");
+					var userBit;
+					if (user == myUsername) {
+						userBit = "<b class='me'>"+user+"</b>";
+					} else {
+						userBit = "<b>"+user+"</b>";
+					}
+					log.append("<div class='msg'>"+userBit+"<br><p class='ms'>"+mess+"</p></div>");
 					}
 					doregbut.click(function() {
 							var pass = $("#registerPassword").val();
@@ -45,6 +52,7 @@
 						conn.send($("#inputServer").val());
 						conn.send($("#inputUsername").val());
 						conn.send($("#inputPassword").val());
+						myUsername = $("#inputUsername").val();
 						$("#MessBox").html("<p><b>Attempting Login...</b></p>");
 						state = 3
 						});
@@ -120,6 +128,9 @@
 		color: white;
 		margin-left:20px;
 	}
+	.me {
+		color: #CCCCDD;
+	}
 </style>
 	</head>
 	<body style="height:100%;">
@@ -189,18 +200,6 @@
 					<button type="submit" class="btn" id="submitRegisterButton">Register</button>
 					<button type="submit" class="btn" id="cancelRegisterButton">Cancel</button>
 				</div>
-			</div>
-			<div class="alert alert-error" id="registerPassError">
-				<button type="button" class="close" data-dismiss="alert">&times;</button>
-				<strong>Password Error!</strong> Passwords must be the same.
-			</div>
-			<div class="alert alert-error" id="registerServerError">
-				<button type="button" class="close" data-dismiss="alert">&times;</button>
-				<strong>Server Error!</strong> Server not found.
-			</div>
-			<div class="alert alert-error" id="registerUserError">
-				<button type="button" class="close" data-dismiss="alert">&times;</button>
-				<strong>Username Registration Error!</strong> Username is already registered on this server.
 			</div>
 		</div>
 		<div id="chatarea" style="height:100%; width:95%; position: relative;">
