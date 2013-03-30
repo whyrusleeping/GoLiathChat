@@ -17,6 +17,7 @@
 					var cancreg = $("#cancelRegisterButton");
 					var doregbut = $("#submitRegisterButton");
 					var state = 0;
+					var lockToBottom = true;
 
 					function appendLog(msg) {
 					log.append("<p class='msg'>" + msg + "</p>");
@@ -56,7 +57,16 @@
 							regbox.show(300);
 							loginarea.hide(300);
 							});
-
+					log.on('scroll', function() {
+							if (log.prop('scrollHeight') - log.prop('clientHeight') - log.scrollTop() === 0) {
+							lockToBottom = true;
+							} else {
+							lockToBottom = false;
+							}});
+					log.on('DOMNodeInserted', function() {
+							if(lockToBottom) {
+							log.scrollTop(log.prop('scrollHeight'));
+							}});
 					inpBox.keyup(function(event){
 							if(event.keyCode == 13) {
 							conn.send(inpBox.val());
@@ -95,7 +105,6 @@
 							var user = str.slice(0, str.indexOf(char));
 							var mess = str.slice(str.indexOf(char) + 1);
 							addMess(user, mess);
-							log.scrollTop(log.height())
 						};
 					} else {
 						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
