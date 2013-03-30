@@ -18,3 +18,5 @@ makeConsole-debug:
 
 makeConsole-release:
 
+makeLauncher:
+	go build launcher.go
