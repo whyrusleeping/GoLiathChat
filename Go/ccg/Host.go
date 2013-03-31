@@ -2,6 +2,7 @@ package ccg
 
 import (
 	"code.google.com/p/go.crypto/scrypt"
+	"compress/gzip"
 	"crypto/tls"
 	"strings"
 	"bytes"
@@ -33,6 +34,7 @@ func NewHost() *Host {
 	cert, err := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
 	if err != nil {
 		//Bad certs!!!
+		panic(err)
 	}
 	h := Host{}
 	h.cert = cert
@@ -183,8 +185,20 @@ func (h *Host) readMessages() {
 			//For now, just attempt a TCP connection
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code. FALSE
 		case THistory:
-			h.messages.AddEntryInOrder(p)
-			h.Reader <- p
+			rbuf := bytes.NewReader(p.Payload)
+			zipr, zerr := gzip.NewReader(rbuf)
+			if zerr != nil {
+				//Bad package?
+				continue
+			}
+			var err error
+			err = nil
+			for err == nil {
+				hp, err := ReadPacket(zipr)
+				if err == nil {
+					h.Reader <- hp
+				}
+			}
 		default:
 			h.Reader <- p
 		}
@@ -253,4 +267,8 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 
 func (h *Host) RequestPeerToPeer(username string) {
 	h.conn.Write(NewPacket(TPeerRequest,h.username,[]byte(username)).GetBytes())
+}
+
+func (h *Host) RequestHistory(num int) {
+	h.conn.Write(NewPacket(THistory,h.username, WriteInt32(int32(num))).GetBytes())
 }

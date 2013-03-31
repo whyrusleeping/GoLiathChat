@@ -5,8 +5,8 @@ import (
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/rand"
 	"crypto/tls"
+	"compress/gzip"
 	"errors"
-	"strconv"
 	"fmt"
 	"log"
 	"net"
@@ -203,29 +203,6 @@ func (s *Server) command(p *Packet) {
 		} else {
 			go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
 		}
-	case "history":
-		count := 20
-		if len(args) >= 2 {
-			count,_ = strconv.Atoi(args[1])
-		}
-		hist := s.messages.LastNEntries(count)
-		fmt.Println(s.messages.count)
-		s.UserLock.RLock()
-		u := s.users[p.Username]
-		s.UserLock.RUnlock()
-		go func() {
-			for _,m := range hist {
-				if m == nil {
-					log.Println("the message is null for some reason...")
-				} else {
-					fmt.Println(m)
-					m.Typ = THistory
-					temp := m.GetBytes()
-					fmt.Println(temp)
-					u.Conn.Write(temp)
-				}
-			}
-		}()
 	case "names", "who":
 		s.UserLock.RLock()
 		names := "Users Online:\n"
@@ -263,6 +240,26 @@ func (s *Server) MessageHandler() {
 			s.parse <- p
 		case TCommand:
 			s.command(p)
+		case THistory:
+			count := BytesToInt32(p.Payload)
+			hist := s.messages.LastNEntries(int(count))
+			fmt.Println(s.messages.count)
+			s.UserLock.RLock()
+			u := s.users[p.Username]
+			s.UserLock.RUnlock()
+			tbuf := new(bytes.Buffer)
+			zipp := gzip.NewWriter(tbuf)
+			go func() {
+				for _,m := range hist {
+					if m != nil {
+						m.Typ = THistory
+						temp := m.GetBytes()
+						zipp.Write(temp)
+					}
+				}
+			}()
+			zipp.Close()
+			u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)
