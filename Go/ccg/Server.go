@@ -243,7 +243,6 @@ func (s *Server) MessageHandler() {
 		case THistory:
 			count := BytesToInt32(p.Payload)
 			hist := s.messages.LastNEntries(int(count))
-			fmt.Println(s.messages.count)
 			s.UserLock.RLock()
 			u := s.users[p.Username]
 			s.UserLock.RUnlock()
@@ -257,9 +256,9 @@ func (s *Server) MessageHandler() {
 						zipp.Write(temp)
 					}
 				}
+				zipp.Close()
+				u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
 			}()
-			zipp.Close()
-			u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)

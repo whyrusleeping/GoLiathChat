@@ -9,6 +9,7 @@ import (
 	"net"
 	"fmt"
 	"time"
+	"log"
 )
 
 //Login Flags
@@ -185,18 +186,23 @@ func (h *Host) readMessages() {
 			//For now, just attempt a TCP connection
 			//Actually, just do nothing for now. Because doing nothing is better than crappy code. FALSE
 		case THistory:
+			log.Println("History!")
 			rbuf := bytes.NewReader(p.Payload)
 			zipr, zerr := gzip.NewReader(rbuf)
 			if zerr != nil {
+				log.Println(zerr)
 				//Bad package?
 				continue
 			}
 			var err error
 			err = nil
+			var hp *Packet
 			for err == nil {
-				hp, err := ReadPacket(zipr)
+				hp, err = ReadPacket(zipr)
 				if err == nil {
 					h.Reader <- hp
+				} else {
+					log.Println(err)
 				}
 			}
 		default:

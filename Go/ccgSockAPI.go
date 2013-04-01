@@ -65,7 +65,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	log.Println("Authenticated")
 	serv.Start()
 	websocket.Message.Send(ws, "Notice:Connection to chat server successful!")
-	serv.Send("/history 200")
+	serv.RequestHistory(200)
 	run := true
 
 	go func() {
@@ -80,10 +80,6 @@ func handleWebsocket(ws *websocket.Conn) {
 		if err != nil {
 			log.Println("UI Disconnected.")
 			run = false
-		}
-		if len(message) > 8 && message[0] == '/' && message[:8] == "/history" {
-			//Explanation: For now, history is going to be a one time request on connection (at least for this client for now)
-			continue
 		}
 		if message != "" {
 			log.Println(message)
