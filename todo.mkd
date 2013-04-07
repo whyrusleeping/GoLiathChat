@@ -1,0 +1,9 @@
+#Things to do before release
+
+- Better colors for UI
+- Static Build UI for Linux
+- Installer for Windows
+- Make file transfers more user friendly
+	- File picker window?
+
+
