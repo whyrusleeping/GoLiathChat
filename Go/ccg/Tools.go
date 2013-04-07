@@ -7,6 +7,11 @@ import (
 	"encoding/binary"
 	"io"
 	"strings"
+	"crypto/x509"
+	"crypto/tls"
+	"crypto/rsa"
+	"encoding/pem"
+	"fmt"
 )
 
 //Awesome salt thanks to travis lane.
@@ -105,4 +110,38 @@ func extractCommand(pay string) string {
 		i = len(pay)
 	}
 	return pay[1:i]
+}
+
+func TryLoadCert(filename, host string) (*x509.Certificate, error) {
+	return nil, nil
+}
+
+func SaveCert(c *x509.Certificate) error {
+	return nil
+}
+
+func MakeCert(host string) (*tls.Certificate, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, err
+	}
+	prkey := x509.MarshalPKCS1PrivateKey(priv)
+	pbkey, pberr := x509.MarshalPKIXPublicKey(priv.PublicKey)
+	if pberr != nil {
+		panic(pberr)
+	}
+	prblk := pem.Block{}
+	prblk.Bytes = prkey
+	prblk.Type = "PRIVATE KEY"
+	pbblk := pem.Block{}
+	pbblk.Bytes = pbkey
+	pbblk.Type = "PUBLIC KEY"
+	privPem := pem.EncodeToMemory(&prblk)
+	fmt.Println(string(privPem))
+	pubPem := pem.EncodeToMemory(&pbblk)
+	crt, err := tls.X509KeyPair(pubPem, privPem)
+	if err != nil {
+		return nil, err
+	}
+	return &crt, nil
 }

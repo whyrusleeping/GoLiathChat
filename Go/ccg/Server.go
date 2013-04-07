@@ -46,6 +46,7 @@ func (s *Server) LoginPrompt() {
 
 func StartServer() *Server {
 	cert, err := tls.LoadX509KeyPair("../certs/server.pem", "../certs/server.key")
+	//cert, err := MakeCert("jero.my")
 	if err != nil {
 		log.Fatalf("server: loadkeys: %s", err)
 	}

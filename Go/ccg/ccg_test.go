@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"math/rand"
 	"runtime"
+	"encoding/pem"
+	"fmt"
 )
 
 func TestPasswordHash(t *testing.T) {

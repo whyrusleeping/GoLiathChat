@@ -29,10 +29,11 @@ func handleWebsocket(ws *websocket.Conn) {
 	success := false
 	inf := "Reading Input"
 	for success == false {
+		log.Println(inf)
 		err := websocket.Message.Receive(ws, &contype)
 		if err != nil {
 			log.Println("Error reading from websocket.")
-			return
+			os.Exit(0)
 		}
 		websocket.Message.Receive(ws, &host)
 		websocket.Message.Receive(ws, &username)
@@ -93,11 +94,13 @@ func handleWebsocket(ws *websocket.Conn) {
 func StartWebSockInterface() {
 	http.HandleFunc("/", httpHandler)
 	http.Handle("/ws", websocket.Handler(handleWebsocket))
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
 	pathToIndex = strings.Replace(os.Args[0], "apicli", "index.html",1)
-	log.Println(pathToIndex)
 	StartWebSockInterface()
 }
