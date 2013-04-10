@@ -1,0 +1,5 @@
+#Liscense
+
+This program is copyright (C) 2013 by Jeromy Johnson and Travis Lane, all rights reserved.
+
+You are free to distribute this program to anyone you want, so long as you do not charge anything for it, and it is not altered. You must give away the code in its entirety, or not at all.
