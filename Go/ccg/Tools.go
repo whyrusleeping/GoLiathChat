@@ -2,16 +2,18 @@ package ccg
 
 import (
 	"bytes"
+	"os"
 	"code.google.com/p/go.crypto/scrypt"
 	"crypto/rand"
 	"encoding/binary"
 	"io"
 	"strings"
 	"crypto/x509"
-	"crypto/tls"
 	"crypto/rsa"
 	"encoding/pem"
-	"fmt"
+	"time"
+	"math/big"
+	"crypto/x509/pkix"
 )
 
 //Awesome salt thanks to travis lane.
@@ -31,7 +33,7 @@ func ReadInt32(c io.Reader) int32 {
 }
 
 func BytesToInt32(a []byte) int32 {
-	n := 0
+	var n int
 	n += int(a[0])
 	n += int(a[1]) << 8
 	n += int(a[2]) << 16
@@ -120,28 +122,44 @@ func SaveCert(c *x509.Certificate) error {
 	return nil
 }
 
-func MakeCert(host string) (*tls.Certificate, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+func MakeCert(host string)  error {
+	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	prkey := x509.MarshalPKCS1PrivateKey(priv)
-	pbkey, pberr := x509.MarshalPKIXPublicKey(priv.PublicKey)
-	if pberr != nil {
-		panic(pberr)
+
+	now := time.Now()
+
+	template := x509.Certificate{
+		SerialNumber: new(big.Int).SetInt64(0),
+		Subject: pkix.Name{
+			CommonName:   host,
+			Organization: []string{"GoliathChat"},
+		},
+		NotBefore: now.Add(-5 * time.Minute).UTC(),
+		NotAfter:  now.AddDate(1, 0, 0).UTC(), // valid for 1 year.
+
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
-	prblk := pem.Block{}
-	prblk.Bytes = prkey
-	prblk.Type = "PRIVATE KEY"
-	pbblk := pem.Block{}
-	pbblk.Bytes = pbkey
-	pbblk.Type = "PUBLIC KEY"
-	privPem := pem.EncodeToMemory(&prblk)
-	fmt.Println(string(privPem))
-	pubPem := pem.EncodeToMemory(&pbblk)
-	crt, err := tls.X509KeyPair(pubPem, privPem)
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &crt, nil
+
+	certOut, err := os.Create("cert.pem")
+	if err != nil {
+		return err
+	}
+	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	certOut.Close()
+
+	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	keyOut.Close()
+	return nil
 }

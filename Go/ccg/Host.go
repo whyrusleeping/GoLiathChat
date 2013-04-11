@@ -32,15 +32,18 @@ type Host struct {
 }
 
 func NewHost() *Host {
-	cert, _ := tls.LoadX509KeyPair("../certs/client.pem", "../certs/client.key")
-	//if err != nil {
-	//	//Bad certs!!!
-	//	panic(err)
-	//}
+	var cert tls.Certificate
+	var err error
+	for cert, err = tls.LoadX509KeyPair("cert.pem", "key.pem"); err != nil; {
+		log.Println(err)
+		MakeCert("127.0.0.1")
+		err = nil
+	}
+
 	h := Host{}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
-	h.config = nil
+	//h.config = nil
 	h.filesLocal = make(map[string]*File)
 	h.usersOnline = make([]string, 0, 256)
 	h.filesAvailable = make([]string, 0 ,256)
