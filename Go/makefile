@@ -1,4 +1,4 @@
-all: dir client server tbexample apicli
+all: dir client server apicli
 
 dir:
 	test -d bin || mkdir bin
@@ -8,9 +8,6 @@ client:
 
 server:
 	go build -o bin/server ccgServer.go
-
-tbexample:
-	go build -o bin/example example.go
 
 apicli:
 	go build -o bin/apicli ccgSockAPI.go

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html style="height:100%;">
+	<head>
+		<title>Goliath Chat</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+		<script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+		<link href="http://netdna.bootstrapcdn.com/bootswatch/2.3.1/slate/bootstrap.min.css" rel="stylesheet">
+		<script type="text/javascript">
+			$(function() {
+					var conn;
+					var log = $("#chatBackground");
+					var loginarea = $("#loginbox");
+					var chatarea = $("#chatarea");
+					var inpBox = $("#chatInput");
+					var regbox = $("#registerbox");
+					var iregbut = $("#registerButton");
+					var cancreg = $("#cancelRegisterButton");
+					var doregbut = $("#submitRegisterButton");
+					var state = 0;
+					var lockToBottom = true;
+					var myUsername;
+
+					function appendLog(msg) {
+					log.append("<p class='msg'>" + msg + "</p>");
+					}
+
+					function addMess(user, mess) {
+					var userBit;
+					if (user == myUsername) {
+						userBit = "<b class='me'>"+user+"</b>";
+					} else {
+						userBit = "<b>"+user+"</b>";
+					}
+					log.append("<div class='msg'>"+userBit+"<br><p class='ms'>"+mess+"</p></div>");
+					}
+					doregbut.click(function() {
+							var pass = $("#registerPassword").val();
+							if (pass != $("#registerPasswordConfirm").val() ){
+							conn.send(pass);
+								} else {								
+							conn.send("register");
+							conn.send($("#registerServer").val());
+							conn.send($("#registerUsername").val());
+							$("#registerPassError").show(200);
+							regbox.hide(500);
+							loginarea.show(500);
+							state = 3;
+							}
+							});
+					$("#loginButton").click(function() {
+						conn.send("login");
+						conn.send($("#inputServer").val());
+						conn.send($("#inputUsername").val());
+						conn.send($("#inputPassword").val());
+						myUsername = $("#inputUsername").val();
+						$("#MessBox").html("<p><b>Attempting Login...</b></p>");
+						state = 3
+						});
+
+					cancreg.click(function() {
+							regbox.hide(300);
+							loginarea.show(300);
+							});
+					iregbut.click(function() {
+							regbox.show(300);
+							loginarea.hide(300);
+							});
+					log.on('scroll', function() {
+							if (log.prop('scrollHeight') - log.prop('clientHeight') - log.scrollTop() === 0) {
+							lockToBottom = true;
+							} else {
+							lockToBottom = false;
+							}});
+					log.on('DOMNodeInserted', function() {
+							if(lockToBottom) {
+							log.scrollTop(log.prop('scrollHeight'));
+							}});
+					inpBox.keyup(function(event){
+							if(event.keyCode == 13) {
+							conn.send(inpBox.val());
+							inpBox.val("");
+							}
+							});
+					if (window["WebSocket"]) {
+						chatarea.hide();
+						regbox.hide();
+
+						conn = new WebSocket("ws://127.0.0.1:8080/ws");
+						conn.onclose = function(evt) {
+							appendLog("<p><b>Connection closed.</b></p>")
+						};
+						conn.onmessage = function(evt) {
+							if (state == 3) {
+								if (evt.data == "YES") {
+									//Show chat window
+									loginarea.hide(500);
+									chatarea.show(500);
+								} else if (evt.data == "NO") {
+									state = 4;
+									return;
+								}
+								state = 0;
+								return;
+							}
+							if (state == 4) {
+								//evt.data is the reason for the login failure
+								$("#MessBox").html("<p><b>"+evt.data+"</b></p>");
+								state = 0;
+								return;
+							}
+							var char = ':';
+							var str = evt.data;
+							var user = str.slice(0, str.indexOf(char));
+							var mess = str.slice(str.indexOf(char) + 1);
+							addMess(user, mess);
+						};
+					} else {
+						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
+					}
+			});
+
+</script>
+<style media="all" type="text/css">
+	.msg b {
+		color: black;
+	}
+	.ms {
+		color: white;
+		margin-left:20px;
+	}
+	.me {
+		color: #CCCCDD;
+	}
+</style>
+	</head>
+	<body style="height:100%;">
+		<div id="loginbox" align="center">
+			<div class="control-group">
+				<label class="control-label" for="inputUsername">Username</label>
+				<div class="controls">
+					<input type="text" id="inputUsername" placeholder="Username">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="inputPassword">Password</label>
+				<div class="controls">
+					<input type="password" id="inputPassword" placeholder="Password">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="inputServer">Server</label>
+				<div class="controls">
+					<input type="text" id="inputServer" placeholder="Server IP">
+				</div>
+			</div>
+			<div class="control-group">
+				<div class="controls">
+					<button id="loginButton" class="btn">Login </button>
+					<button id="registerButton" class="btn">Register </button>
+				</div>
+			</div>
+			<div id="MessBox">
+			</div>
+			<div class="alert alert-error" id="loginUPError"style="visibility: hidden;">
+				<button type="button" class="close" data-dismiss="alert" visibility="hidden">&times;</button>
+				<strong>Login Error!</strong> Username or Password were incorrect.
+			</div>
+			<div class="alert alert-error" id="loginServerError"style="visibility: hidden;">
+				<button type="button" class="close" data-dismiss="alert">&times;</button>
+				<strong>Server Error!</strong> Server not found.
+			</div>
+		</div>
+		<div id="registerbox" align="center">
+			<div class="control-group">
+				<label class="control-label" for="registerUsername">Username</label>
+				<div class="controls">
+					<input type="text" id="registerUsername" placeholder="Username">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="registerPassword">Password</label>
+				<div class="controls">
+					<input type="password" id="registerPassword" placeholder="Password">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="registerPasswordConfirm">Password</label>
+				<div class="controls">
+					<input type="password" id="registerPasswordConfirm" placeholder="Confirm Password">
+				</div>
+			</div>
+			<div class="control-group">
+				<label class="control-label" for="registerServer">Server</label>
+				<div class="controls">
+					<input type="text" id="registerServer" placeholder="Server IP">
+				</div>
+			</div>
+			<div class="control-group">
+				<div class="controls">
+					<button type="submit" class="btn" id="submitRegisterButton">Register</button>
+					<button type="submit" class="btn" id="cancelRegisterButton">Cancel</button>
+				</div>
+			</div>
+		</div>
+		<div id="chatarea" style="height:100%; width:95%; position: relative;">
+			<div style="width:100%; position:absolute; top:0; bottom:45px; overflow:auto; padding:10px;" id="chatBackground">
+			</div>
+			<input style="min-width:90%; position:absolute; bottom:0; left:5px;" type="text" id="chatInput" />
+		</div>
+	</body>
+</html>
