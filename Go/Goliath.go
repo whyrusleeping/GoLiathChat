@@ -141,7 +141,7 @@ func initPage(title string, uri string, size_x int, size_y int) {
 }
 
 func main() {
-	binDirectory = strings.Replace(os.Args[0], "apicli", "",1)
+	binDirectory = strings.Replace(os.Args[0], "Goliath", "",1)
 	go func() {StartWebSockInterface()}()
 	time.Sleep(time.Millisecond * 50)
 	StartWebkit()

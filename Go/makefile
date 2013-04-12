@@ -10,4 +10,4 @@ server:
 	go build -o bin/server ccgServer.go
 
 apicli:
-	go build -o bin/apicli ccgSockAPI.go
+	go build -o bin/Goliath Goliath.go
