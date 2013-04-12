@@ -221,6 +221,7 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
+	log.Println(phash)
 	h.conn.Write(phash)
 }
 
@@ -230,6 +231,8 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	loginByte[0] = TLogin
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
+	log.Println(password)
+	log.Println(iPassHash)
 	//Write the usernames length, followed by the username.
 	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)

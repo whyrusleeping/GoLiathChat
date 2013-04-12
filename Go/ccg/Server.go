@@ -92,6 +92,7 @@ func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 		key := bufPool.GetBuffer(32)
 		u.Conn.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
+		log.Println(key)
 		rp := NewPacket(TRegister, uname, key)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..

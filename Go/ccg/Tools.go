@@ -163,3 +163,9 @@ func MakeCert(host string)  error {
 	keyOut.Close()
 	return nil
 }
+
+func GetBinDir() string {
+	binf := os.Args[0]
+	lslsh := strings.LastIndex(binf, "/")
+	return binf[:lslsh]
+}

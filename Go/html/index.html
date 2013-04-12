@@ -36,12 +36,12 @@
 					doregbut.click(function() {
 							var pass = $("#registerPassword").val();
 							if (pass != $("#registerPasswordConfirm").val() ){
-							conn.send(pass);
+							//invalid password
 								} else {								
 							conn.send("register");
 							conn.send($("#registerServer").val());
 							conn.send($("#registerUsername").val());
-							$("#registerPassError").show(200);
+							conn.send($("#registerPassword").val());
 							regbox.hide(500);
 							loginarea.show(500);
 							state = 3;

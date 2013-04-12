@@ -1,4 +1,4 @@
-all: dir client server apicli
+all: dir client server GoliathWK
 
 dir:
 	test -d bin || mkdir bin
@@ -9,5 +9,5 @@ client:
 server:
 	go build -o bin/server ccgServer.go
 
-apicli:
+GoliathWK:
 	go build -o bin/Goliath Goliath.go
