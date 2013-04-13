@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	/*"time"
+	"time"
     "github.com/mattn/go-gtk/gtk"
-    "github.com/mattn/go-webkit/webkit"*/
+    "github.com/mattn/go-webkit/webkit"
 )
 
 var binDirectory string
@@ -41,11 +41,8 @@ func handleWebsocket(ws *websocket.Conn) {
 			os.Exit(0)
 		}
 		websocket.Message.Receive(ws, &host)
-		log.Printf("Host: %s\n", host)
 		websocket.Message.Receive(ws, &username)
-		log.Printf("User: %s\n", username)
 		websocket.Message.Receive(ws, &password)
-		log.Printf("Pass: %s\n", password)
 		if !strings.Contains(host, ":") {
 			host += ":10234"
 		}
@@ -112,7 +109,6 @@ func StartWebSockInterface() {
 	}
 }
 
-/*
 func StartWebkit() {
 	initPage("Goliath Chat", "http://127.0.0.1:8080/index.html", 600,600)
 }
@@ -146,12 +142,12 @@ func initPage(title string, uri string, size_x int, size_y int) {
 		soup_uri.Free()
 	}
 	gtk.Main()
-}*/
+}
 
 func main() {
 	binDirectory = strings.Replace(os.Args[0], "Goliath", "",1)
-	/*go func() {StartWebSockInterface()}()
+	go func() {StartWebSockInterface()}()
 	time.Sleep(time.Millisecond * 50)
-	StartWebkit()*/
-	StartWebSockInterface()
+	StartWebkit()
+	//StartWebSockInterface()
 }

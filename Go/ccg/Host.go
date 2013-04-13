@@ -231,8 +231,6 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	loginByte[0] = TLogin
 	h.conn.Write(loginByte)
 	iPassHash := HashPassword(password)
-	log.Println(password)
-	log.Println(iPassHash)
 	//Write the usernames length, followed by the username.
 	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)
@@ -264,12 +262,10 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 3, 32)
 
 	//and ensure that it is correct
-	ver := true
-	for i := 0; ver && i < 32; i++ {
-		ver = ver && (sr[i] == srVer[i])
-	}
-	if !ver {
-		return false, "Invalid response from server"
+	for i := 0; i < 32; i++ {
+		if sr[i] != srVer[i] {
+			return false, "Invalid response from server"
+		}
 	}
 	//Send login flags to the server
 	loginByte[0] = lflags
