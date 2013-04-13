@@ -14,10 +14,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"bufio"
 )
 
 type Server struct {
 	regReqs    map[string][]byte
+	regLock    sync.Mutex
 	PassHashes map[string][]byte
 	PHlock	   sync.RWMutex
 	users      map[string]*User
@@ -59,6 +61,7 @@ func StartServer() *Server {
 	}
 	s := Server{
 		make(map[string][]byte),
+		sync.Mutex{},
 		make(map[string][]byte),
 		sync.RWMutex{},
 		make(map[string]*User),
@@ -221,6 +224,8 @@ func (s *Server) command(p *Packet) {
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
 		s.UserLock.Unlock()
+	case "reqs", "regs":
+		
 	default:
 		log.Println("Command unrecognized")
 	}
@@ -372,18 +377,15 @@ func (s *Server) loadUserList(filename string) {
 }
 
 func (s *Server) saveUserList(filename string) {
-	wrbuf := new(bytes.Buffer)
+	f, _ := os.Create(filename)
+	wrbuf := bufio.NewWriter(f)
 	s.PHlock.RLock()
 	for name, phash := range s.PassHashes {
 		wrbuf.Write(BytesFromShortString(name))
 		//wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
+		wrbuf.WriteByte(s.users[name].perms)
 	}
 	s.PHlock.RUnlock()
-	f, _ := os.Create(filename)
-	_, err := f.Write(wrbuf.Bytes())
-	if err != nil {
-		panic(err)
-	}
 	f.Close()
 }

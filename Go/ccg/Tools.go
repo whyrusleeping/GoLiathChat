@@ -167,5 +167,5 @@ func MakeCert(host string)  error {
 func GetBinDir() string {
 	binf := os.Args[0]
 	lslsh := strings.LastIndex(binf, "/")
-	return binf[:lslsh]
+	return binf[:lslsh+1]
 }

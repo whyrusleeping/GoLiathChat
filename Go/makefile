@@ -1,4 +1,4 @@
-all: dir client server GoliathWK
+all: dir client server GoliathLite GoliathWK
 
 dir:
 	test -d bin || mkdir bin
@@ -11,3 +11,6 @@ server:
 
 GoliathWK:
 	go build -o bin/Goliath Goliath.go
+
+GoliathLite:
+	go build -o bin/Goliath-Lite Goliath-lite.go
