@@ -31,11 +31,7 @@ Note: Registrations are per-server and your account details on one server will n
 
 **History**
 
-We allows users to request history through using the `history` command
-
-      /history [number of messages]
-
-By default a set amount of history is requested upon login.
+Upon login, the server will send a large chunk of chat history to you.
 
 **File Transfers**
 

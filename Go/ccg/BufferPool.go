@@ -40,7 +40,6 @@ func (bp *BufferPool) Free(b []byte) {
 	}
 }
 
-
 func (bp *BufferPool) GetBuffer(size int) []byte{
 	//find a buffer with at least the given size
 	//and return it

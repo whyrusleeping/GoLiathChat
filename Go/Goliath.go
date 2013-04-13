@@ -13,6 +13,7 @@ import (
     "github.com/mattn/go-webkit/webkit"
 )
 
+var UsePort = ":8080"
 var binDirectory string
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
@@ -103,14 +104,14 @@ func handleWebsocket(ws *websocket.Conn) {
 func StartWebSockInterface() {
 	http.HandleFunc("/", httpHandler)
 	http.Handle("/ws", websocket.Handler(handleWebsocket))
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(UsePort, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func StartWebkit() {
-	initPage("Goliath Chat", "http://127.0.0.1:8080/index.html", 600,600)
+	initPage("Goliath Chat", "http://127.0.0.1" + UsePort + "/index.html", 600,600)
 }
 
 func initPage(title string, uri string, size_x int, size_y int) {

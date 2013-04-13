@@ -1,6 +1,15 @@
-all: makeGo-debug
+all:
+	echo "Please Specify which build GoliathWK, GoliathLite or server"
 
-makeGo-debug:
-	cd Go; make GoliathWK
+GoliathWK:
+	cd Go
+	make GoliathWK
 
-install: makeGo-debug
+GoliathLite:
+	cd Go
+	make GoliathLite
+
+server:
+	cd go
+	make server
+

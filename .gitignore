@@ -3,6 +3,7 @@
 users.f
 */bin/*
 *.pem
+bin/*
 */certs/*
 .tags
 example

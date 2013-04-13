@@ -1,16 +1,17 @@
 all: dir server GoliathLite GoliathWK
 
+BINDIR=../bin
 dir:
-	test -d bin || mkdir bin
+	test -d $(BINDIR) || mkdir $(BINDIR)
 
 client: 
-	go build -o bin/client ccgClient.go
+	go build -o $(BINDIR)/client ccgClient.go
 
 server:
-	go build -o bin/server ccgServer.go
+	go build -o $(BINDIR)/server ccgServer.go
 
 GoliathWK:
-	go build -o bin/Goliath Goliath.go
+	go build -o $(BINDIR)/Goliath Goliath.go
 
 GoliathLite:
-	go build -o bin/Goliath-Lite Goliath-lite.go
+	go build -o $(BINDIR)/Goliath-Lite Goliath-lite.go

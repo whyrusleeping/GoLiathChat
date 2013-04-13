@@ -12,6 +12,7 @@ import (
 	"github.com/toqueteos/webbrowser"
 )
 
+var UsePort = ":8080"
 var binDirectory string
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
@@ -102,14 +103,14 @@ func handleWebsocket(ws *websocket.Conn) {
 func StartWebSockInterface() {
 	http.HandleFunc("/", httpHandler)
 	http.Handle("/ws", websocket.Handler(handleWebsocket))
-	err := http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(UsePort, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func StartWebkit() {
-	webbrowser.Open("127.0.0.1:8080/index.html")
+	webbrowser.Open("127.0.0.1"+ UsePort + "/index.html")
 }
 
 func main() {
