@@ -384,7 +384,7 @@ func (s *Server) saveUserList(filename string) {
 		wrbuf.Write(BytesFromShortString(name))
 		//wrbuf.WriteByte(s.users[name].perms)
 		wrbuf.Write(phash)
-		wrbuf.WriteByte(s.users[name].perms)
+		//wrbuf.WriteByte(s.users[name].perms)
 	}
 	s.PHlock.RUnlock()
 	f.Close()
