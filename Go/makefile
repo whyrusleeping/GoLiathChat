@@ -1,4 +1,4 @@
-all: dir client server GoliathLite GoliathWK
+all: dir server GoliathLite GoliathWK
 
 dir:
 	test -d bin || mkdir bin
