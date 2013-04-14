@@ -14,8 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"bufio"
 )
+
+var ufLoc string //Users file location
 
 type Server struct {
 	regReqs    map[string][]byte
@@ -31,8 +32,11 @@ type Server struct {
 	messages   *MessageLog
 }
 
+func init() {
+	ufLoc = GetBinDir() + "users.bin"
+}
+
 func (s *Server) LoginPrompt() {
-	ufLoc := GetBinDir() + "users.bin"
 	s.loadUserList(ufLoc)
 	if len(s.PassHashes) > 0 {
 		return
@@ -200,7 +204,7 @@ func (s *Server) command(p *Packet) {
 			s.PHlock.Unlock()
 			delete(s.regReqs, args[1])
 			log.Printf("%s registered!\n", args[1])
-			s.saveUserList("users.f")
+			s.saveUserList(ufLoc)
 		}
 	case "dl":
 		//User wishes to download a file
@@ -368,7 +372,10 @@ func (s *Server) SendFileToUser(file *File, username string) error {
 
 //Loads the list of users that have accounts on the server
 func (s *Server) loadUserList(filename string) {
-	f, _ := os.Open(filename)
+	f, err := os.Open(filename)
+	if err != nil {
+		return
+	}
 	for {
 		uname, err := ReadShortString(f)
 		if err != nil {
@@ -383,14 +390,14 @@ func (s *Server) loadUserList(filename string) {
 }
 
 func (s *Server) saveUserList(filename string) {
-	f, _ := os.Create(filename)
-	wrbuf := bufio.NewWriter(f)
+	f, err := os.Create(filename)
+	if err != nil {
+		log.Println(err)
+	}
 	s.PHlock.RLock()
 	for name, phash := range s.PassHashes {
-		wrbuf.Write(BytesFromShortString(name))
-		//wrbuf.WriteByte(s.users[name].perms)
-		wrbuf.Write(phash)
-		//wrbuf.WriteByte(s.users[name].perms)
+		f.Write(BytesFromShortString(name))
+		f.Write(phash)
 	}
 	s.PHlock.RUnlock()
 	f.Close()

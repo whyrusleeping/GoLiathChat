@@ -43,3 +43,18 @@ Once a file is on the server, other users may download it with:
 
 	/dl filename
 
+##Installation (Building from source)
+
+Installation on Linux is very simple, ensure you have Go installed and do the following:
+
+	git clone git://github.com/whyrusleeping/GoLiathChat.git
+	cd GoLiathChat
+	./configure.sh
+
+And depending on which version you want (Goliath vs GoliathLite)
+
+	#For Goliath (requires gtk webkit libraries)
+	make GoliathWK
+
+	#For GoliathLite (statically builds with no need for external libraries)
+	make GoliathLite
