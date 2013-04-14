@@ -130,6 +130,8 @@ func MakeCert(host string)  error {
 
 	now := time.Now()
 
+	bin := GetBinDir()
+
 	template := x509.Certificate{
 		SerialNumber: new(big.Int).SetInt64(0),
 		Subject: pkix.Name{
@@ -148,14 +150,14 @@ func MakeCert(host string)  error {
 		return err
 	}
 
-	certOut, err := os.Create("cert.pem")
+	certOut, err := os.Create(bin + "cert.pem")
 	if err != nil {
 		return err
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	certOut.Close()
 
-	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(bin + "key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}

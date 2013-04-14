@@ -32,7 +32,8 @@ type Server struct {
 }
 
 func (s *Server) LoginPrompt() {
-	s.loadUserList("users.f")
+	ufLoc := GetBinDir() + "users.bin"
+	s.loadUserList(ufLoc)
 	if len(s.PassHashes) > 0 {
 		return
 	}
@@ -43,14 +44,15 @@ func (s *Server) LoginPrompt() {
 	fmt.Println("Password:")
 	fmt.Scanf("%s", &pass)
 	s.PassHashes[handle] = HashPassword(pass)
-	s.saveUserList("users.f")
+	s.saveUserList(ufLoc)
 }
 
 func StartServer() *Server {
-	cert, err := tls.LoadX509KeyPair("../certs/server.pem", "../certs/server.key")
-	//cert, err := MakeCert("jero.my")
-	if err != nil {
-		log.Fatalf("server: loadkeys: %s", err)
+	bin := GetBinDir()
+	var cert tls.Certificate
+	var err error
+	for cert, err = tls.LoadX509KeyPair(bin + "cert.pem", bin + "key.pem"); err != nil; {
+		MakeCert("127.0.0.1")
 	}
 	config := tls.Config{Certificates: []tls.Certificate{cert}}
 	config.Rand = rand.Reader
@@ -206,7 +208,11 @@ func (s *Server) command(p *Packet) {
 		if len(args) < 2 {
 			log.Println("No file specified.")
 		} else {
-			go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+			sf := s.uplFiles[args[1]]
+			if sf != nil {
+				go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+			}
+			//TODO: Send message back saying 'invalid filename' or whatever
 		}
 	case "names", "who":
 		s.UserLock.RLock()
@@ -225,7 +231,7 @@ func (s *Server) command(p *Packet) {
 		s.users[p.Username].Nickname = "Anon"
 		s.UserLock.Unlock()
 	case "reqs", "regs":
-		
+
 	default:
 		log.Println("Command unrecognized")
 	}

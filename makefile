@@ -8,5 +8,5 @@ GoliathLite:
 	cd Go; make GoliathLite
 
 server:
-	cd go; make server
+	cd Go; make server
 

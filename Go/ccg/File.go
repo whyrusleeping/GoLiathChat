@@ -30,10 +30,10 @@ const BlockSize = 4096
 func LoadFile(path string) (*File, error) {
 	//Open File
 	f, err := os.Open(path)
-	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	//Get file info and calculate block count
 	finfo, _ := os.Stat(path)

@@ -34,7 +34,8 @@ type Host struct {
 func NewHost() *Host {
 	var cert tls.Certificate
 	var err error
-	for cert, err = tls.LoadX509KeyPair("cert.pem", "key.pem"); err != nil; {
+	bin := GetBinDir()
+	for cert, err = tls.LoadX509KeyPair(bin + "cert.pem", bin + "key.pem"); err != nil; {
 		log.Println(err)
 		MakeCert("127.0.0.1")
 		err = nil
@@ -98,7 +99,12 @@ func (h *Host) writeMessages() {
 			switch cmd {
 			case "upload":
 				if len(args) > 1 {
-					go h.SendFile(args[1])
+					go func() {
+						er := h.SendFile(args[1])
+						if er != nil {
+							h.Reader <- NewPacket(TMessage, "Error", []byte(fmt.Sprintf("Error loading file at '%s'", args[1])))
+						}
+					}()
 				}
 				continue
 			case "files":
@@ -164,11 +170,16 @@ func (h *Host) readMessages() {
 			blockSize := ReadInt32(buf)
 			blck := NewBlock(int(blockSize))
 			buf.Read(blck.data)
-			h.filesLocal[fname].data[bid] = blck
-			if h.filesLocal[fname].IsComplete() {
-				h.filesLocal[fname].Save()
-				p = NewPacket(TMessage,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
-				h.Reader <- p
+			fi := h.filesLocal[fname]
+			fi.data[bid] = blck
+			if fi.IsComplete() {
+				err := fi.Save()
+				if err != nil {
+					log.Println("File save failed to: %s\n%s\n",fi.Filename, err.Error())
+				} else {
+					p = NewPacket(TMessage,"Notice",[]byte(fmt.Sprintf("%s download complete!",fname)))
+					h.Reader <- p
+				}
 			}
 		case TServerInfo:
 			//Parse this into a struct. maybe?
