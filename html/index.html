@@ -2,210 +2,316 @@
 <html style="height:100%;">
 	<head>
 		<title>Goliath Chat</title>
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-		<script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
-		<link href="http://netdna.bootstrapcdn.com/bootswatch/2.3.1/slate/bootstrap.min.css" rel="stylesheet">
 		<script type="text/javascript">
-			$(function() {
-					var conn;
-					var log = $("#chatBackground");
-					var loginarea = $("#loginbox");
-					var chatarea = $("#chatarea");
-					var inpBox = $("#chatInput");
-					var regbox = $("#registerbox");
-					var iregbut = $("#registerButton");
-					var cancreg = $("#cancelRegisterButton");
-					var doregbut = $("#submitRegisterButton");
-					var state = 0;
-					var lockToBottom = true;
-					var myUsername;
+			function ChatWindow() {
+				var websock;
 
-					function appendLog(msg) {
-					log.append("<p class='msg'>" + msg + "</p>");
-					}
+				function connectSock() {
+					websock = new WebSocket("ws://127.0.0.1:8080/ws");
+					websock.onclose = function(evt) {
+						//Halt
+					};
+				}
 
-					function addMess(user, mess) {
-					var userBit;
-					if (user == myUsername) {
-						userBit = "<b class='me'>"+user+"</b>";
-					} else {
-						userBit = "<b>"+user+"</b>";
-					}
-					log.append("<div class='msg'>"+userBit+"<br><p class='ms'>"+mess+"</p></div>");
-					}
-					doregbut.click(function() {
-							var pass = $("#registerPassword").val();
-							if (pass != $("#registerPasswordConfirm").val() ){
-							//invalid password
-								} else {								
-							conn.send("register");
-							conn.send($("#registerServer").val());
-							conn.send($("#registerUsername").val());
-							conn.send($("#registerPassword").val());
-							regbox.hide(500);
-							loginarea.show(500);
-							state = 3;
+				var options = {
+					get: 	"data.json",
+					first_name: "Guest",
+					last_name: "Account Rabbit",
+					photo: "http://jimmyl.ee/public/guest.png"
+				}
+
+				var isEmpty = function(object) {
+					return Object.keys(object).length === 0;
+				}
+
+				var chatObject = function(data) {
+					var name		= "" + data.user.first_name + " " + data.user.last_name + "";
+					var avatar		= data.user.photo;
+					var buffer		= data.message;
+
+					var chatItem = document.createElement('div');
+					chatItem.className = 'item';
+					chatItem.innerHTML = '<div class="image"><img src="' + avatar + '"></img></div><div class="chatbox"><div class="name"><p class="nameText">' + name +'</p></div><div class="text"><p class="chatText">'+ buffer +'</p></div></div>';
+					document.getElementById("chat-window").appendChild(chatItem);
+				}
+
+				this.getLastMessages = function( callback ) {
+					var httpRequest = new XMLHttpRequest();
+					httpRequest.onreadystatechange = function(callback, error) {
+						if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+							var data = JSON.parse(httpRequest.responseText);
+							for (var i = 0, item; item = data[i]; i++) {
+								chatObject(item);
 							}
-							});
-					$("#loginButton").click(function() {
-						conn.send("login");
-						conn.send($("#inputServer").val());
-						conn.send($("#inputUsername").val());
-						conn.send($("#inputPassword").val());
-						myUsername = $("#inputUsername").val();
-						$("#MessBox").html("<p><b>Attempting Login...</b></p>");
-						state = 3
-						});
+							window.scrollTo(0, document.height);
+						}
+					};
+					httpRequest.open('GET', options.get);
+					httpRequest.send();
+				}
 
-					cancreg.click(function() {
-							regbox.hide(300);
-							loginarea.show(300);
-							});
-					iregbut.click(function() {
-							regbox.show(300);
-							loginarea.hide(300);
-							});
-					log.on('scroll', function() {
-							if (log.prop('scrollHeight') - log.prop('clientHeight') - log.scrollTop() === 0) {
-							lockToBottom = true;
-							} else {
-							lockToBottom = false;
-							}});
-					log.on('DOMNodeInserted', function() {
-							if(lockToBottom) {
-							log.scrollTop(log.prop('scrollHeight'));
-							}});
-					inpBox.keyup(function(event){
-							if(event.keyCode == 13) {
-							conn.send(inpBox.val());
-							inpBox.val("");
-							}
-							});
-					if (window["WebSocket"]) {
-						chatarea.hide();
-						regbox.hide();
-
-						conn = new WebSocket("ws://127.0.0.1:8080/ws");
-						conn.onclose = function(evt) {
-							appendLog("<p><b>Connection closed.</b></p>")
+				this.postMessage = function(e) {
+					e.which = e.which || e.keyCode;
+					if (e.which == 13) {
+						var buffer = document.getElementById("textInput").value;
+						var object = {
+							"user": {
+								"first_name": options.first_name,
+								"last_name": options.last_name,
+								"photo": options.photo
+							},
+							"message": ""+ buffer +""
 						};
-						conn.onmessage = function(evt) {
-							if (state == 3) {
-								if (evt.data == "YES") {
-									//Show chat window
-									loginarea.hide(500);
-									chatarea.show(500);
-								} else if (evt.data == "NO") {
-									state = 4;
-									return;
-								}
-								state = 0;
-								return;
-							}
-							if (state == 4) {
-								//evt.data is the reason for the login failure
-								$("#MessBox").html("<p><b>"+evt.data+"</b></p>");
-								state = 0;
-								return;
-							}
-							var char = ':';
-							var str = evt.data;
-							var user = str.slice(0, str.indexOf(char));
-							var mess = str.slice(str.indexOf(char) + 1);
-							addMess(user, mess);
-						};
-					} else {
-						appendLog($("<p><b>Your browser does not support WebSockets.</b></p>"))
+						chatObject(object);
+						window.scrollTo(0, document.height);
+						document.getElementById("textInput").value = "";
 					}
-			});
+				}
+				return this;
+			}
+			window.onload = function() {
+				window.ChatWindow = new ChatWindow();
+				//window.ChatWindow.getLastMessages();
 
-</script>
-<style media="all" type="text/css">
-	.msg b {
-		color: black;
-	}
-	.ms {
-		color: white;
-		margin-left:20px;
-	}
-	.me {
-		color: #CCCCDD;
-	}
-</style>
+				// Enter Key Event
+				document.getElementById("textInput").onkeyup = function(event) {
+					window.ChatWindow.postMessage(event);
+				}
+			};
+		</script>
+		<style media="all" type="text/css">
+			html,body,div,span,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,abbr,address,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strong,sub,sup,var,b,i,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,figcaption,figure,footer,header,hgroup,menu,nav,section,summary,time,mark,audio,video{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}
+			body{line-height:1}
+			article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{display:block}
+			nav ul{list-style:none}
+			blockquote,q{quotes:none}
+			blockquote:before,blockquote:after,q:before,q:after{content:none}
+			a{margin:0;padding:0;font-size:100%;vertical-align:baseline;background:transparent}
+			ins{background-color:#ff9;color:#000;text-decoration:none}
+			mark{background-color:#ff9;color:#000;font-style:italic;font-weight:bold}
+			del{text-decoration:line-through}
+			abbr[title],dfn[title]{border-bottom:1px dotted;cursor:help}
+			table{border-collapse:collapse;border-spacing:0}
+			hr{display:block;height:1px;border:0;border-top:1px solid #ccc;margin:1em 0;padding:0}
+			input,select{vertical-align:middle}
+
+
+			/*//////////////////////////////////////////////////////////////////////////////
+			//
+			//     	BODY
+			//
+			//////////////////////////////////////////////////////////////////////////////*/
+			section, 
+			div, 
+			.item:hover,
+			a:hover {
+				-webkit-transition: all .25s ease;
+				-moz-transition: all .25s ease;
+				transition: all .25s ease;
+			}
+
+			body {
+				font-family: "Helvetica Neue", helvetica, sans-serif;
+				width: 100%;
+				height: 100%;
+				background: url('img/bg.png');
+			}
+
+			/*///////////////////////////////////////////////////////
+			//
+			//     	CHAT WINDOW
+			//
+			///////////////////////////////////////////////////////*/
+			div#chat-window {
+				width: 100%;
+				height: 100%;
+				float: left;
+				padding: 0px 0px 60px 0px;
+				background: transparent;
+			}
+
+			/*//////////////////////////////////////////////////////////////////////////////
+			//
+			//     	CHAT BOX
+			//
+			//////////////////////////////////////////////////////////////////////////////*/
+			div#chat-window div.item {
+				width: 100%;
+				padding: 0px 5px 0px 5px;
+				float: left;
+				-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+				-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+				box-sizing: border-box;         /* Opera/IE 8+ */
+			}
+
+			div#chat-window div.item div.image {
+				width: 50px;
+				height: 50px;
+				float: left;
+				margin: 10px 10px 10px 10px;
+				background: #000;
+				border-radius: 3px;
+				border: 0;
+				overflow: hidden;
+				-webkit-box-shadow: 1px 1px 3px #999;
+				-moz-box-shadow: 1px 1px 3px #999;
+				box-shadow: 1px 1px 3px #999;
+			}
+
+			div#chat-window div.item div.chatbox {
+				width: -moz-calc(100% - 90px);
+				width: -webkit-calc(100% - 90px);
+				width: calc(100% - 90px);
+				margin: 10px 10px 5px 0;
+				padding: 5px;
+				position: relative;
+				border-radius: 3px;
+				background: #000;
+				float: left;
+				-webkit-box-shadow: 1px 1px 3px #999;
+				-moz-box-shadow: 1px 1px 3px #999;
+				box-shadow: 1px 1px 3px #999;
+			}
+
+			div#chat-window div.item div.chatbox div.name {
+				margin: 2px 2px 2px 5px;
+			}
+
+			div#chat-window div.item div.chatbox div.name p.nameText {
+				font-size: 12px;
+				margin: 0 0 5px 0;
+				color: #FFF;
+				font-weight: 900;
+			}
+
+			div#chat-window div.item div.chatbox div.text {
+				margin: 2px 2px 2px 5px;
+			}
+
+			div#chat-window div.item div.chatbox div.text p.chatText {
+				font-size: 12px;
+				color: #FAFAFA;
+				line-height: 160%;
+			}
+
+			div#chat-window div.chatbox:after, div.chatbox:before {
+				right: 100%;
+				border: solid transparent;
+				content: " ";
+				height: 0;
+				width: 0;
+				position: absolute;
+				pointer-events: none;
+			}
+
+			div#chat-window div.chatbox:after {
+				border-color: rgba(0, 0, 0, 0);
+				border-right-color: #000;
+				border-width: 5px;
+				top: 15px;
+				margin-top: -5px;
+			}
+
+			div#chat-window div.chatbox:before {
+				border-color: rgba(0, 0, 0, 0);
+				border-right-color: #000;
+				border-width: 5px;
+				top: 15px;
+				margin-top: -5px;
+			}
+
+			/*//////////////////////////////////////////////////////////////////////////////
+			//
+			//     	CHAT WINDOW
+			//
+			//////////////////////////////////////////////////////////////////////////////*/
+
+			div#chat-input {
+				width: 100%;
+				position: fixed;
+				bottom: 0;
+				height: 50px;
+				padding: 15px 15px 15px 15px;
+				-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+				-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+				box-sizing: border-box;         /* Opera/IE 8+ */
+			}
+
+			div#chat-input .text {
+				width: 100%;
+				padding: 5px 10px 5px 10px;
+				outline: 0;
+				margin: 0;
+				border: 0;
+				border-radius: 3px;
+				-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+				-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+				box-sizing: border-box;         /* Opera/IE 8+ */
+				-webkit-box-shadow: 1px 1px 3px #999;
+				-moz-box-shadow: 1px 1px 3px #999;
+				box-shadow: 1px 1px 3px #999;
+			}
+			div#box {
+				color:#EEEEEE;
+				padding: 20px;
+				background:#222830;
+				border-radius: 3px;
+				width:480px;
+				margin-top:120px;
+				margin-left:auto;
+				margin-right:auto;
+			}
+
+			div#box label {
+				float: left;
+				padding-top:2px;
+			}
+
+			div#box input {
+				float:right;
+				position:relative;
+				font-weight:200;
+				font-size:15px;
+				border-radius:3px;
+				height:20px;
+			}
+
+			div#box button {
+				margin:5px;
+				padding:4px;
+				height:35px;
+				width:80px;
+				color:black;
+				border: 1px solid #CCC;
+			}
+
+			div#box button:hover {
+				border: 2px solid #AAA;
+			}
+
+			.inp {
+				height:20px;
+				width: 360px;
+				margin-left:auto;
+				margin-right:auto;
+			}
+		</style>
 	</head>
 	<body style="height:100%;">
-		<div id="loginbox" align="center">
-			<div class="control-group">
-				<label class="control-label" for="inputUsername">Username</label>
-				<div class="controls">
-					<input type="text" id="inputUsername" placeholder="Username">
-				</div>
-			</div>
-			<div class="control-group">
-				<label class="control-label" for="inputPassword">Password</label>
-				<div class="controls">
-					<input type="password" id="inputPassword" placeholder="Password">
-				</div>
-			</div>
-			<div class="control-group">
-				<label class="control-label" for="inputServer">Server</label>
-				<div class="controls">
-					<input type="text" id="inputServer" placeholder="Server IP">
-				</div>
-			</div>
-			<div class="control-group">
-				<div class="controls">
-					<button id="loginButton" class="btn">Login </button>
-					<button id="registerButton" class="btn">Register </button>
-				</div>
-			</div>
-			<div id="MessBox">
-			</div>
-			<div class="alert alert-error" id="loginUPError"style="visibility: hidden;">
-				<button type="button" class="close" data-dismiss="alert" visibility="hidden">&times;</button>
-				<strong>Login Error!</strong> Username or Password were incorrect.
-			</div>
-			<div class="alert alert-error" id="loginServerError"style="visibility: hidden;">
-				<button type="button" class="close" data-dismiss="alert">&times;</button>
-				<strong>Server Error!</strong> Server not found.
+		<div id="LoginScreen">
+			<div id="box">
+					<div class="inp"><label>Username:</label><input type="text" id="username" /></div><br>
+					<div class="inp"><label>Password:</label><input type="password" id="password" /></div><br>
+					<div class="inp"><label>Server:</label><input type="text" id="server" /></div><br>
+				<center>
+					<button class="btn-custom" type="submit">Login</button>
+					<button class="btn-custom" type="submit">Register</button>
+				</center>
 			</div>
 		</div>
-		<div id="registerbox" align="center">
-			<div class="control-group">
-				<label class="control-label" for="registerUsername">Username</label>
-				<div class="controls">
-					<input type="text" id="registerUsername" placeholder="Username">
-				</div>
-			</div>
-			<div class="control-group">
-				<label class="control-label" for="registerPassword">Password</label>
-				<div class="controls">
-					<input type="password" id="registerPassword" placeholder="Password">
-				</div>
-			</div>
-			<div class="control-group">
-				<label class="control-label" for="registerPasswordConfirm">Password</label>
-				<div class="controls">
-					<input type="password" id="registerPasswordConfirm" placeholder="Confirm Password">
-				</div>
-			</div>
-			<div class="control-group">
-				<label class="control-label" for="registerServer">Server</label>
-				<div class="controls">
-					<input type="text" id="registerServer" placeholder="Server IP">
-				</div>
-			</div>
-			<div class="control-group">
-				<div class="controls">
-					<button type="submit" class="btn" id="submitRegisterButton">Register</button>
-					<button type="submit" class="btn" id="cancelRegisterButton">Cancel</button>
-				</div>
-			</div>
+		<div id="RegScreen">
 		</div>
-		<div id="chatarea" style="height:100%; width:95%; position: relative;">
-			<div style="width:100%; position:absolute; top:0; bottom:45px; overflow:auto; padding:10px;" id="chatBackground">
-			</div>
-			<input style="min-width:90%; position:absolute; bottom:0; left:5px;" type="text" id="chatInput" />
+		<div id="ChatScreen">
 		</div>
 	</body>
 </html>
