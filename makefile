@@ -1,15 +1,12 @@
 all:
-	echo "Please Specify which build GoliathWK, GoliathLite or server"
+	@echo "Please Specify which build: GoliathWK, GoliathLite or server"
 
 GoliathWK:
-	cd Go
-	make GoliathWK
+	cd Go; make GoliathWK
 
 GoliathLite:
-	cd Go
-	make GoliathLite
+	cd Go; make GoliathLite
 
 server:
-	cd go
-	make server
+	cd go; make server
 
