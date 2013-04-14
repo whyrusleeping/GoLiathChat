@@ -235,7 +235,29 @@ func (s *Server) command(p *Packet) {
 		s.users[p.Username].Nickname = "Anon"
 		s.UserLock.Unlock()
 	case "reqs", "regs":
-
+		s.regLock.Lock()
+		var reqs string
+		for u, _ := range s.regReqs {
+			reqs += fmt.Sprintf("[%s] ", u)
+		}
+		s.regLock.Unlock()
+		s.UserLock.RLock()
+		ruser := s.users[p.Username]
+		s.UserLock.RUnlock()
+		ruser.Conn.Write( NewPacket(TMessage, "Server", []byte(reqs)).GetBytes())
+	case "deny","reject":
+		s.regLock.Lock()
+		if _, ok := s.regReqs[args[1]]; ok {
+			delete(s.regReqs, args[1])
+		}
+		s.regLock.Unlock()
+	case "kick":
+		s.UserLock.Lock()
+		u := s.users[args[1]]
+		if u != nil {
+			u.Conn.Close()
+		}
+		s.UserLock.Unlock()
 	default:
 		log.Println("Command unrecognized")
 	}
