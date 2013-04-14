@@ -143,9 +143,6 @@ func (f *File) getBytesForBlock(num int) []byte {
 	return buf.Bytes()
 }
 
-//Some thoughts:
-//
-//when file size gets large enough we wont want to hold the entire file in memory
-// To avoid this i think making the packets one at a time and sending them off would be ideal
-// on the receiving side, the packets could be written to a file as they are received. 
-//Im not entirely sure how this works for torrents, but i beleive its similar. (i certainly have downloaded files larger than my ram before)
+//File should contain an input/output file stream, and a gzip wrapper over that. 
+//It should then have sendBlock, or receiveBlock and immediately write to the buffer to conserve ram usage
+//Also: Always gzip. Who cares?
