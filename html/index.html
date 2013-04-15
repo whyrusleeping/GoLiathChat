@@ -34,12 +34,16 @@
 				document.getElementById("ChatScreen").style.display = 'block';
 
 				//Make the websocket protocol just use json
-				websock.onmessage = function() {
+				websock.onmessage = function(evt) {
 					var char = ':';
 					var str = evt.data;
 					var user = str.slice(0, str.indexOf(char));
-					var mess = str.slice(str.indexOf(char) + 1);
-					addMess(user, mess);
+					var message = str.slice(str.indexOf(char) + 1);
+					var chatItem = document.createElement('div');
+					var photo = "img/1.png";
+					chatItem.className = 'item';
+					chatItem.innerHTML = '<div class="image"><img src="' + photo + '"></img></div><div class="chatbox"><div class="name"><p class="nameText">' + user +'</p></div><div class="text"><p class="chatText">'+ message +'</p></div></div>';
+					document.getElementById("chat-window").appendChild(chatItem);
 				}
 			}
 
@@ -69,7 +73,7 @@
 				erb.innerHTML = error;
 				erb.style.display = 'block';
 				erb.style.opacity = 1;
-				setTimeout(HideError, 4000)
+				setTimeout(HideError, 1000)
 			}
 
 			function HideError() {
@@ -115,8 +119,7 @@
 					e.which = e.which || e.keyCode;
 					if (e.which == 13) {
 						var buffer = document.getElementById("textInput").value;
-						chatObject(options.name, ""+buffer+"", options.photo);
-						window.scrollTo(0, document.height);
+						websock.send(buffer);
 						document.getElementById("textInput").value = "";
 					}
 				}
@@ -126,8 +129,8 @@
 				window.ChatWindow = new ChatWindow();
 
 				//Login Button Click event
-				//document.getElementById("login").onclick = DoLogin;
-				document.getElementById("login").onclick = StartChatMode;
+				document.getElementById("login").onclick = DoLogin;
+				//document.getElementById("login").onclick = StartChatMode;
 
 				//On clicking the register button, show the register screen
 				document.getElementById("register").onclick = function() {
@@ -202,8 +205,14 @@
 				width: 100%;
 				height: 100%;
 				float: left;
-				padding: 0px 0px 60px 0px;
 				background: transparent;
+				margin:0;
+				padding:0;
+				position: absolute;
+				top:0;
+				left:0;
+				bottom:45;
+				overflow:auto;
 			}
 
 			/*//////////////////////////////////////////////////////////////////////////////
@@ -390,18 +399,17 @@
 			}
 			#textInput {
 				position: absolute;
-				bottom:0px;
+				height:30px;
+				bottom:0;
 				width: 90%;
-				width: calc(100% - 20px);
-			}
-			#chat-window {
-				position: absolute;
-				top:0;
-				left:0;
-				bottom:45px;
-				overflow:auto;
+				/*width: calc(100% - 20px);*/
 			}
 			div#ChatScreen {
+				height:100%;
+				width:100%;
+				position:relative;
+				margin:0;
+				padding:0;
 			}
 		</style>
 	</head>
@@ -432,8 +440,7 @@
 		<div id="ErrorBox">
 		</div>
 		<div id="ChatScreen">
-			<div id="chat-window">
-			</div>
+			<div id="chat-window"></div>
 			<input type="text" id="textInput" />
 		</div>
 	</body>
