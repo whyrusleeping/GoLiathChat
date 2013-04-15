@@ -3,16 +3,73 @@
 	<head>
 		<title>Goliath Chat</title>
 		<script type="text/javascript">
-			function ChatWindow() {
-				var websock;
+			var websock;
+			function DoLogin() {
+				websock.send("login");
+				var server = document.getElementById("server").value;
+				websock.send(server);
+				var user = document.getElementById("username").value;
+				websock.send(user);
+				var pass = document.getElementById("password").value;
+				websock.send(pass);
+				websock.onmessage = LoginResponse;
+			}
 
-				function connectSock() {
-					websock = new WebSocket("ws://127.0.0.1:8080/ws");
-					websock.onclose = function(evt) {
-						//Halt
-					};
+			//Wait for the client to send back information about the login attempt
+			function LoginResponse(evt) {
+				if (evt.data == "YES") {
+					//Switch to chat mode
+				} else if (evt.data == "NO") {
+					ShowError("Login Failed!");
+				} else {
+					//Read error message, this only happens in case of a "NO"
 				}
+			}
 
+			function DoRegister() {
+				websock.send("register");
+				var server = document.getElementById("Rserver").value;
+				websock.send(server);
+				var user = document.getElementById("Rusername").value;
+				websock.send(user);
+				var pass = document.getElementById("Rpassword").value;
+				var passVer = document.getElementById("RpasswordVer").value;
+				if (pass != passVer) {
+					ShowError("Passwords do not match!");
+					return
+				}
+				websock.send(pass);
+				websock.onmessage = RegisterResponse;
+
+			}
+
+			function RegisterResponse(evt) {
+				
+			}
+
+			function ShowError(error) {
+				var erb = document.getElementById("ErrorBox");
+				erb.innerHTML = error;
+				erb.style.opacity = 1;
+				setTimeout(HideError, 4000)
+			}
+
+			function HideError() {
+				var erb = document.getElementById("ErrorBox");
+				erb.style.opacity = 0;
+			}
+
+			function ConnectWebSock() {
+				websock = new WebSocket("ws://127.0.0.1:8080/ws");
+				websock.onclose = function(evt) {
+					ShowError("WebSocket Closed!!!")
+				}
+				websock.onerror = function(evt) {
+					ShowError(evt.data);
+				}
+			}
+
+			function ChatWindow() {
 				var options = {
 					get: 	"data.json",
 					first_name: "Guest",
@@ -71,7 +128,27 @@
 			}
 			window.onload = function() {
 				window.ChatWindow = new ChatWindow();
-				//window.ChatWindow.getLastMessages();
+
+				//Login Button Click event
+				document.getElementById("login").onclick = DoLogin;
+
+				//On clicking the register button, show the register screen
+				document.getElementById("register").onclick = function() {
+					document.getElementById("RegScreen").style.display = 'block';
+					document.getElementById("LoginScreen").style.display = 'none';
+				}
+
+				document.getElementById("cancelRegister").onclick = function() {
+					document.getElementById("RegScreen").style.display = 'none';
+					document.getElementById("LoginScreen").style.display = 'block';
+				}
+
+				//Hide Chat and Register areas
+				document.getElementById("RegScreen").style.display = 'none';
+				document.getElementById("ChatScreen").style.display = 'none';
+
+				//connect the websocket
+				ConnectWebSock();
 
 				// Enter Key Event
 				document.getElementById("textInput").onkeyup = function(event) {
@@ -295,23 +372,53 @@
 				margin-left:auto;
 				margin-right:auto;
 			}
+
+			div#ErrorBox {
+				text-align:center;
+				font-weight: bold;
+				margin-top:20px;
+				width:480px;
+				padding:20px;
+				font-size:15px;
+				margin-left:auto;
+				margin-right:auto;
+				border-radius:3px;
+				background:#DC143C;
+
+				opacity: 0;
+			    transition: opacity 1s ease-out;
+			    -webkit-transition: opacity 1s ease-out;
+			}
 		</style>
 	</head>
 	<body style="height:100%;">
 		<div id="LoginScreen">
 			<div id="box">
-					<div class="inp"><label>Username:</label><input type="text" id="username" /></div><br>
-					<div class="inp"><label>Password:</label><input type="password" id="password" /></div><br>
-					<div class="inp"><label>Server:</label><input type="text" id="server" /></div><br>
+				<div class="inp"><label>Username:</label><input type="text" id="username" /></div><br>
+				<div class="inp"><label>Password:</label><input type="password" id="password" /></div><br>
+				<div class="inp"><label>Server:</label><input type="text" id="server" /></div><br>
 				<center>
-					<button class="btn-custom" type="submit">Login</button>
-					<button class="btn-custom" type="submit">Register</button>
+					<button class="btn-custom" id="login" type="submit">Login</button>
+					<button class="btn-custom" id="register" type="submit">Register</button>
 				</center>
 			</div>
 		</div>
 		<div id="RegScreen">
+			<div id="box">
+				<div class="inp"><label>Username:</label><input type="text" id="Rusername" /></div><br>
+				<div class="inp"><label>Password:</label><input type="password" id="Rpassword" /></div><br>
+				<div class="inp"><label>Verify:</label><input type="password" id="RpasswordVer" /></div><br>
+				<div class="inp"><label>Server:</label><input type="text" id="Rserver" /></div><br>
+				<center>
+					<button id="doRegister" type="submit">Register</button>
+					<button id="cancelRegister" type="submit">Cancel</button>
+				</center>
+			</div>
 		</div>
 		<div id="ChatScreen">
+			<input type="text" id="textInput" />
+		</div>
+		<div id="ErrorBox">
 		</div>
 	</body>
 </html>

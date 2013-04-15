@@ -52,6 +52,7 @@ func handleWebsocket(ws *websocket.Conn) {
 			log.Println(err)
 			inf = "Could not connect to remote host."
 			contype = ""
+			success = false
 		}
 
 		//Do login
