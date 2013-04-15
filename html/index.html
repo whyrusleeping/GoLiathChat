@@ -94,6 +94,13 @@
 				}
 			}
 
+			function OnInsert() {
+				if (lockToBottom) {
+					var log = document.getElementById("chat-window");
+					log.scrollTop = log.scrollHeight;
+				}
+			}
+
 			function ConnectWebSock() {
 				websock = new WebSocket("ws://127.0.0.1:8080/ws");
 				websock.onclose = function(evt) {
@@ -131,9 +138,11 @@
 					e.which = e.which || e.keyCode;
 					if (e.which == 13) {
 						var buffer = document.getElementById("textInput").value;
-						//websock.send(buffer);
-						chatObject("Jeromy", buffer, "img/3.png");
-						document.getElementById("textInput").value = "";
+						if (buffer.length > 0) {
+							//websock.send(buffer);
+							chatObject("Jeromy", buffer, "img/3.png");
+							document.getElementById("textInput").value = "";
+						}
 					}
 				}
 				return this;
@@ -147,6 +156,7 @@
 
 				//Register scrolling events
 				document.getElementById("chat-window").onscroll = OnScroll;
+				document.getElementById("chat-window").addEventListener("DOMNodeInserted", OnInsert, true);
 
 				//On clicking the register button, show the register screen
 				document.getElementById("register").onclick = function() {
@@ -427,7 +437,7 @@
 			}
 		</style>
 	</head>
-	<body style="height:100%;">
+	<body style="height:90%;">
 		<div id="LoginScreen">
 			<div id="box">
 				<div class="inp"><label>Username:</label><input type="text" id="username" /></div><br>
