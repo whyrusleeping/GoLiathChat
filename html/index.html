@@ -4,6 +4,8 @@
 		<title>Goliath Chat</title>
 		<script type="text/javascript">
 			var websock;
+			var lockToBottom = true;
+
 			function DoLogin() {
 				websock.send("login");
 				var server = document.getElementById("server").value;
@@ -82,6 +84,16 @@
 				setTimeout(function() {erb.style.display = 'none';}, 1000)
 			}
 
+			//Functions for auto scrolling the chat div
+			function OnScroll() {
+				var log = document.getElementById("chat-window");
+				if (log.scrollHeight - log.clientHeight - log.scrollTop === 0) {
+					lockToBottom = true;
+				} else {
+					lockToBottom = false;
+				}
+			}
+
 			function ConnectWebSock() {
 				websock = new WebSocket("ws://127.0.0.1:8080/ws");
 				websock.onclose = function(evt) {
@@ -119,7 +131,8 @@
 					e.which = e.which || e.keyCode;
 					if (e.which == 13) {
 						var buffer = document.getElementById("textInput").value;
-						websock.send(buffer);
+						//websock.send(buffer);
+						chatObject("Jeromy", buffer, "img/3.png");
 						document.getElementById("textInput").value = "";
 					}
 				}
@@ -129,8 +142,11 @@
 				window.ChatWindow = new ChatWindow();
 
 				//Login Button Click event
-				document.getElementById("login").onclick = DoLogin;
-				//document.getElementById("login").onclick = StartChatMode;
+				//document.getElementById("login").onclick = DoLogin;
+				document.getElementById("login").onclick = StartChatMode;
+
+				//Register scrolling events
+				document.getElementById("chat-window").onscroll = OnScroll;
 
 				//On clicking the register button, show the register screen
 				document.getElementById("register").onclick = function() {
@@ -203,15 +219,13 @@
 			///////////////////////////////////////////////////////*/
 			div#chat-window {
 				width: 100%;
-				height: 100%;
 				float: left;
 				background: transparent;
 				margin:0;
 				padding:0;
 				position: absolute;
 				top:0;
-				left:0;
-				bottom:45;
+				bottom:45px;
 				overflow:auto;
 			}
 
