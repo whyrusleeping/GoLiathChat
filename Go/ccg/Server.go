@@ -257,6 +257,10 @@ func (s *Server) command(p *Packet) {
 			u.Conn.Close()
 		}
 		s.UserLock.Unlock()
+	case "quit":
+		s.UserLock.Lock()
+		s.users[p.Username].connected = false
+		s.UserLock.Unlock()
 	default:
 		log.Println("Command unrecognized")
 	}
