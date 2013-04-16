@@ -111,12 +111,6 @@
 				}
 			}
 
-			function TextBoxKeyPress(event) {
-				if (e.keyCode == 13) {
-					//send message
-				}
-			}
-
 			function ChatWindow() {
 				var options = {
 					name: "Guest",
@@ -139,8 +133,8 @@
 					if (e.which == 13) {
 						var buffer = document.getElementById("textInput").value;
 						if (buffer.length > 0) {
-							//websock.send(buffer);
-							chatObject("Jeromy", buffer, "img/3.png");
+							websock.send(buffer);
+							//chatObject("Jeromy", buffer, "img/3.png");
 							document.getElementById("textInput").value = "";
 						}
 					}
@@ -151,8 +145,8 @@
 				window.ChatWindow = new ChatWindow();
 
 				//Login Button Click event
-				//document.getElementById("login").onclick = DoLogin;
-				document.getElementById("login").onclick = StartChatMode;
+				document.getElementById("login").onclick = DoLogin;
+				//document.getElementById("login").onclick = StartChatMode;
 
 				//Register scrolling events
 				document.getElementById("chat-window").onscroll = OnScroll;
@@ -420,6 +414,7 @@
 				opacity: 0;
 			    transition: opacity 1s ease-out;
 			    -webkit-transition: opacity 1s ease-out;
+				display: none;
 			}
 			#textInput {
 				position: absolute;
@@ -437,7 +432,7 @@
 			}
 		</style>
 	</head>
-	<body style="height:90%;">
+	<body style="height:100%;">
 		<div id="LoginScreen">
 			<div id="box">
 				<div class="inp"><label>Username:</label><input type="text" id="username" /></div><br>
