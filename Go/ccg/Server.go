@@ -324,6 +324,11 @@ func (s *Server) MessageHandler() {
 		case TPeerRequest:
 			s.SendBridgeInfoToUser(string(p.Payload), p.Username)
 		case TImage:
+			s.UserLock.Lock()
+			u := s.users[p.Username]
+			u.Image = p.Payload
+			s.UserLock.Unlock()
+			s.Broadcast("", p)
 			//Get user uploaded image...
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)

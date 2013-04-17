@@ -6,12 +6,15 @@ import (
 	"crypto/tls"
 	"strings"
 	"bytes"
+	"os"
 	"io/ioutil"
 	"net"
 	"fmt"
 	"time"
 	"log"
 )
+
+var ImgDir string = GetBinDir() + "../html/img/"
 
 //Login Flags
 const (
@@ -121,6 +124,10 @@ func (h *Host) writeMessages() {
 				rp := NewPacket(TMessage, "Notice", []byte(txt))
 				h.Reader <- rp
 				continue
+			case "pic":
+				if len(args) > 1 {
+					go h.SendImage(args[1])
+				}
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
@@ -230,6 +237,16 @@ func (h *Host) readMessages() {
 					log.Println(err)
 				}
 			}
+		case TImage:
+			//Get image and save in appropriate spot
+			f, err := os.Create(ImgDir + p.Username + ".png")
+			if err != nil {
+				log.Println("Failed to write user image.")
+			} else {
+				f.Write(p.Payload)
+				f.Close()
+			}
+
 		default:
 			h.Reader <- p
 		}
