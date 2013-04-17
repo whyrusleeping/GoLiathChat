@@ -44,7 +44,7 @@
 					var chatItem = document.createElement('div');
 					var photo = "img/1.png";
 					chatItem.className = 'item';
-					chatItem.innerHTML = '<div class="image"><img src="' + photo + '"></img></div><div class="chatbox"><div class="name"><p class="nameText">' + user +'</p></div><div class="text"><p class="chatText">'+ message +'</p></div></div>';
+					chatItem.innerHTML = '<div class="image"><img src="img/' + user + '.png"></img></div><div class="chatbox"><div class="name"><p class="nameText">' + user +'</p></div><div class="text"><p class="chatText">'+ message +'</p></div></div>';
 					document.getElementById("chat-window").appendChild(chatItem);
 				}
 			}
@@ -457,6 +457,8 @@
 			</div>
 		</div>
 		<div id="ErrorBox">
+		</div>
+		<div id="NoticeBox">
 		</div>
 		<div id="ChatScreen">
 			<div id="chat-window"></div>

@@ -12,14 +12,31 @@ import (
 	"github.com/toqueteos/webbrowser"
 )
 
-var UsePort = ":8080"
+var UsePort string = ":8080"
 var binDirectory string
+var htmlRel string = "../html"
+var defaultImg []byte
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
 	file := binDirectory +  "../html" + req.URL.Path
 	log.Println(file)
 	index, _ := ioutil.ReadFile(file)
 	c.Write(index)
+}
+
+func imageHandler(c http.ResponseWriter, req *http.Request) {
+	log.Println("In image function.")
+	if defaultImg == nil {
+		defaultImg, _ = ioutil.ReadFile(binDirectory + htmlRel + "/img/default.png")
+	}
+	path := binDirectory + htmlRel + req.URL.Path
+	log.Println(path)
+	pic, err := ioutil.ReadFile(path)
+	if err != nil {
+		c.Write(defaultImg)
+	} else {
+		c.Write(pic)
+	}
 }
 
 func handleWebsocket(ws *websocket.Conn) {
@@ -102,6 +119,7 @@ func handleWebsocket(ws *websocket.Conn) {
 }
 
 func StartWebSockInterface() {
+	http.HandleFunc("/img/", imageHandler)
 	http.HandleFunc("/", httpHandler)
 	http.Handle("/ws", websocket.Handler(handleWebsocket))
 	err := http.ListenAndServe(UsePort, nil)

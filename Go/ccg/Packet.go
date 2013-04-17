@@ -20,6 +20,7 @@ const (
 	TAccept
 	TPeerRequest
 	TPeerInfo
+	TImage
 )
 
 type Packet struct {

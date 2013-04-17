@@ -92,6 +92,7 @@ func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 			s.UserLock.Lock()
 			s.users[u.Username] = u
 			s.UserLock.Unlock()
+			outp <- NewPacket(TMessage, "Server", []byte(u.Nickname + " has joined the chat."))
 			u.Listen()
 		} else {
 			u.Conn.Close()
@@ -322,6 +323,8 @@ func (s *Server) MessageHandler() {
 			}
 		case TPeerRequest:
 			s.SendBridgeInfoToUser(string(p.Payload), p.Username)
+		case TImage:
+			//Get user uploaded image...
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
 	}
@@ -393,6 +396,27 @@ func (s *Server) SendFileToUser(file *File, username string) error {
 	}
 	//Wait two milliseconds between sendings
 	return nil
+}
+
+//Send out a packet to the specified user, or all if blank string is given
+func (s *Server) Broadcast(user string, p *Packet) {
+	if p == nil {
+		return
+	}
+	pbytes := p.GetBytes()
+	if len(user) == 0 {
+		s.UserLock.RLock()
+		for _, u := range s.users {
+			u.Conn.Write(pbytes)
+		}
+		s.UserLock.RUnlock()
+	} else {
+		s.UserLock.RLock()
+		u, ok := s.users[user]
+		if ok {
+			u.Conn.Write(pbytes)
+		}
+	}
 }
 
 //Loads the list of users that have accounts on the server

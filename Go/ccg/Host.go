@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"strings"
 	"bytes"
+	"io/ioutil"
 	"net"
 	"fmt"
 	"time"
@@ -143,6 +144,15 @@ func (h *Host) SendFile(path string) error {
 		//Wait two milliseconds between sendings
 		time.Sleep(time.Millisecond * 2)
 	}
+	return nil
+}
+
+func (h *Host) SendImage(path string) error {
+	img, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	h.Writer <- NewPacket(TImage, "", img)
 	return nil
 }
 
