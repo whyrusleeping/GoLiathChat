@@ -246,6 +246,10 @@ func (h *Host) readMessages() {
 				f.Write(p.Payload)
 				f.Close()
 			}
+			case TJoin:
+				if p.Username != h.username {
+					h.Reader <- p
+				}
 
 		default:
 			h.Reader <- p

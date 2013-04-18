@@ -11,6 +11,7 @@ const (
 	TMessage
 	TCommand
 	TLogin
+	TJoin
 	TWhisper
 	TFileInfo
 	TFile

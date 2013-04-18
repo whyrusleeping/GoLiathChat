@@ -92,7 +92,7 @@ func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 			s.UserLock.Lock()
 			s.users[u.Username] = u
 			s.UserLock.Unlock()
-			outp <- NewPacket(TMessage, "Server", []byte(u.Nickname + " has joined the chat."))
+			outp <- NewPacket(TJoin, u.Nickname, []byte(u.Nickname + " has joined the chat."))
 			u.Listen()
 		} else {
 			u.Conn.Close()
