@@ -96,10 +96,11 @@ func (h *Host) Cleanup() {
 func (h *Host) writeMessages() {
 	for {
 		p := <-h.Writer
-		if p.Payload[0] == '/' {
+		if p.Typ == TCommand && p.Payload[0] == '/' {
 			//This is a command!
-			cmd := extractCommand(string(p.Payload))
-			args := strings.Split(string(p.Payload)," ")
+			paystring := string(p.Payload)
+			cmd := extractCommand(paystring)
+			args := strings.Split(paystring," ")
 			switch cmd {
 			case "upload":
 				if len(args) > 1 {
@@ -125,9 +126,11 @@ func (h *Host) writeMessages() {
 				h.Reader <- rp
 				continue
 			case "pic":
+				log.Println("PIC!")
 				if len(args) > 1 {
 					go h.SendImage(args[1])
 				}
+				continue
 			}
 		}
 		_, err := h.conn.Write(p.GetBytes())
@@ -159,7 +162,8 @@ func (h *Host) SendImage(path string) error {
 	if err != nil {
 		return err
 	}
-	h.Writer <- NewPacket(TImage, "", img)
+	log.Printf("Len of img: %d\n", len(img))
+	h.Writer <- NewPacket(TImage, h.username, img)
 	return nil
 }
 
@@ -167,7 +171,8 @@ func (h *Host) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
 		if err != nil {
-			panic(err)
+			log.Println(err)
+			os.Exit(1)
 		}
 		//No error, continue on!
 		switch p.Typ {
@@ -245,11 +250,12 @@ func (h *Host) readMessages() {
 			} else {
 				f.Write(p.Payload)
 				f.Close()
+				log.Println("Wrote user image!")
 			}
-			case TJoin:
-				if p.Username != h.username {
-					h.Reader <- p
-				}
+		case TJoin:
+			if p.Username != h.username {
+				h.Reader <- p
+			}
 
 		default:
 			h.Reader <- p

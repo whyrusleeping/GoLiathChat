@@ -19,13 +19,12 @@ var defaultImg []byte
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
 	file := binDirectory +  "../html" + req.URL.Path
-	log.Println(file)
+	//log.Println(file)
 	index, _ := ioutil.ReadFile(file)
 	c.Write(index)
 }
 
 func imageHandler(c http.ResponseWriter, req *http.Request) {
-	log.Println("In image function.")
 	if defaultImg == nil {
 		defaultImg, _ = ioutil.ReadFile(binDirectory + htmlRel + "/img/default.png")
 	}
@@ -110,7 +109,6 @@ func handleWebsocket(ws *websocket.Conn) {
 			run = false
 		}
 		if message != "" {
-			log.Println(message)
 			serv.Send(message)
 		}
 		message = ""

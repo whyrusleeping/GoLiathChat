@@ -263,7 +263,7 @@ func (s *Server) command(p *Packet) {
 		s.users[p.Username].connected = false
 		s.UserLock.Unlock()
 	default:
-		log.Println("Command unrecognized")
+		log.Printf("Command '%s' unrecognized\nPayload: %s", args[0], args[1])
 	}
 }
 
@@ -272,6 +272,7 @@ func (s *Server) command(p *Packet) {
 func (s *Server) MessageHandler() {
 	for {
 		p := <-s.com
+		log.Println(p.Typ)
 		switch p.Typ {
 		case TMessage:
 			s.messages.PushMessage(p)
@@ -328,6 +329,7 @@ func (s *Server) MessageHandler() {
 			u := s.users[p.Username]
 			u.Image = p.Payload
 			s.UserLock.Unlock()
+			log.Println("Got image!!")
 			s.Broadcast("", p)
 			//Get user uploaded image...
 		}

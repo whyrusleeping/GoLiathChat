@@ -14,6 +14,7 @@ import (
 	"time"
 	"math/big"
 	"crypto/x509/pkix"
+	"errors"
 )
 
 //Awesome salt thanks to travis lane.
@@ -69,6 +70,9 @@ func ReadShortString(c io.Reader) (string, error) {
 	var r uint16
 	buf := bytes.NewBuffer(l)
 	binary.Read(buf, binary.LittleEndian, &r)
+	if r < 0 {
+		return "", errors.New("Cannot have length < 0")
+	}
 	strbuf := bufPool.GetBuffer(int(r))
 	c.Read(strbuf)
 	str := string(strbuf)
@@ -78,6 +82,9 @@ func ReadShortString(c io.Reader) (string, error) {
 
 func ReadLongString(c io.Reader) ([]byte, error) {
 	r := ReadInt32(c)
+	if r < 0 {
+		return nil, errors.New("length < 0")
+	}
 	str := make([]byte, r)
 	c.Read(str)
 	return str, nil

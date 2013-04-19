@@ -13,14 +13,30 @@ import (
     "github.com/mattn/go-webkit/webkit"
 )
 
-var UsePort = ":8080"
+var UsePort string = ":8080"
 var binDirectory string
+var htmlRel string = "../html"
+var defaultImg []byte
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
 	file := binDirectory +  "../html" + req.URL.Path
-	log.Println(file)
+	//log.Println(file)
 	index, _ := ioutil.ReadFile(file)
 	c.Write(index)
+}
+
+func imageHandler(c http.ResponseWriter, req *http.Request) {
+	if defaultImg == nil {
+		defaultImg, _ = ioutil.ReadFile(binDirectory + htmlRel + "/img/default.png")
+	}
+	path := binDirectory + htmlRel + req.URL.Path
+	log.Println(path)
+	pic, err := ioutil.ReadFile(path)
+	if err != nil {
+		c.Write(defaultImg)
+	} else {
+		c.Write(pic)
+	}
 }
 
 func handleWebsocket(ws *websocket.Conn) {
@@ -53,6 +69,7 @@ func handleWebsocket(ws *websocket.Conn) {
 			log.Println(err)
 			inf = "Could not connect to remote host."
 			contype = ""
+			success = false
 		}
 
 		//Do login
@@ -93,7 +110,6 @@ func handleWebsocket(ws *websocket.Conn) {
 			run = false
 		}
 		if message != "" {
-			log.Println(message)
 			serv.Send(message)
 		}
 		message = ""
@@ -102,6 +118,7 @@ func handleWebsocket(ws *websocket.Conn) {
 }
 
 func StartWebSockInterface() {
+	http.HandleFunc("/img/", imageHandler)
 	http.HandleFunc("/", httpHandler)
 	http.Handle("/ws", websocket.Handler(handleWebsocket))
 	err := http.ListenAndServe(UsePort, nil)
