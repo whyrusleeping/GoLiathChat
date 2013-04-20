@@ -7,11 +7,13 @@ import (
 	"strings"
 	"bytes"
 	"os"
-	"io/ioutil"
 	"net"
 	"fmt"
 	"time"
 	"log"
+	"github.com/nfnt/resize"
+	"image"
+	"image/png"
 )
 
 var ImgDir string = GetBinDir() + "../html/img/"
@@ -158,18 +160,29 @@ func (h *Host) SendFile(path string) error {
 }
 
 func (h *Host) SendImage(path string) error {
-	img, err := ioutil.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	log.Printf("Len of img: %d\n", len(img))
-	h.Writer <- NewPacket(TImage, h.username, img)
+	img, str, err := image.Decode(f)
+	log.Println(str)
+	if err != nil {
+		return err
+	}
+	res := resize.Resize(50,50,img, resize.Lanczos3)
+	buf := new(bytes.Buffer)
+	png.Encode(buf, res)
+	h.Writer <- NewPacket(TImage, h.username, buf.Bytes())
 	return nil
 }
 
 func (h *Host) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
+		if p.Typ == 0 {
+			panic("well shit")
+		}
+		fmt.Printf("Got packet %s\n",p.Typ)
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)

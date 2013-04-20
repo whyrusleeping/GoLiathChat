@@ -330,7 +330,7 @@ func (s *Server) MessageHandler() {
 			u.Image = p.Payload
 			s.UserLock.Unlock()
 			log.Println("Got image!!")
-			s.Broadcast("", p)
+			s.parse <- p
 			//Get user uploaded image...
 		}
 		//ts := time.Unix(int64(p.timestamp), 0)
@@ -359,6 +359,9 @@ func (s *Server) SendServerInfo() {
 func (s *Server) MessageWriter() {
 	for {
 		p := <-s.parse
+		if p.Typ == 0 {
+			panic("Oh No!")
+		}
 		b := p.GetBytes()
 		s.UserLock.RLock()
 		for uname, u := range s.users {
