@@ -93,6 +93,19 @@ func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 			s.users[u.Username] = u
 			s.UserLock.Unlock()
 			outp <- NewPacket(TJoin, u.Nickname, []byte(u.Nickname + " has joined the chat."))
+			/* Send history to user */
+			hist := s.messages.LastNEntries(200)
+			tbuf := new(bytes.Buffer)
+			zipp := gzip.NewWriter(tbuf)
+			for _,m := range hist {
+				if m != nil {
+					m.Typ = THistory
+					temp := m.GetBytes()
+					zipp.Write(temp)
+				}
+			}
+			zipp.Close()
+			u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
 			u.Listen()
 		} else {
 			u.Conn.Close()
@@ -285,6 +298,7 @@ func (s *Server) MessageHandler() {
 		case TCommand:
 			s.command(p)
 		case THistory:
+			/*
 			count := BytesToInt32(p.Payload)
 			hist := s.messages.LastNEntries(int(count))
 			s.UserLock.RLock()
@@ -303,6 +317,7 @@ func (s *Server) MessageHandler() {
 				zipp.Close()
 				u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
 			}()
+			*/
 		case TFileInfo:
 			buf := bytes.NewBuffer(p.Payload)
 			fname, _ := ReadShortString(buf)

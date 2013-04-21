@@ -20,7 +20,6 @@ var defaultImg []byte
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
 	file := binDirectory +  "../html" + req.URL.Path
-	//log.Println(file)
 	index, _ := ioutil.ReadFile(file)
 	c.Write(index)
 }

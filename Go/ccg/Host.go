@@ -340,5 +340,5 @@ func (h *Host) RequestPeerToPeer(username string) {
 }
 
 func (h *Host) RequestHistory(num int) {
-	h.conn.Write(NewPacket(THistory,h.username, WriteInt32(int32(num))).GetBytes())
+	//h.conn.Write(NewPacket(THistory,h.username, WriteInt32(int32(num))).GetBytes())
 }
