@@ -8,3 +8,5 @@ bin/*
 .tags
 example
 launcher
+html/img/*
+!html/img/default.png
