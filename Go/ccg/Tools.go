@@ -61,6 +61,11 @@ func BytesFromShortString(s string) []byte {
 	return buf.Bytes()
 }
 
+func WriteShortString(w io.Writer, s string) {
+	binary.Write(w, binary.LittleEndian, uint16(len(s)))
+	w.Write([]byte(s))
+}
+
 func ReadShortString(c io.Reader) (string, error) {
 	l := make([]byte, 2)
 	_, err := c.Read(l)
@@ -92,11 +97,13 @@ func ReadLongString(c io.Reader) ([]byte, error) {
 
 func BytesFromLongString(s string) []byte {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, uint32(len(s)))
-	for _, c := range s {
-		binary.Write(buf, binary.LittleEndian, byte(c))
-	}
+	WriteLongString(buf, []byte(s))
 	return buf.Bytes()
+}
+
+func WriteLongString(w io.Writer, s []byte) {
+	w.Write(WriteInt32(int32(len(s))))
+	w.Write(s)
 }
 
 func GeneratePepper() []byte {

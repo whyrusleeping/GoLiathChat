@@ -106,6 +106,17 @@ func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
 			}
 			zipp.Close()
 			u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
+			/* now send images for each user */
+			pics := new(bytes.Buffer)
+			s.UserLock.RLock()
+			for name, u := range s.users {
+				if u.Image != nil {
+					WriteShortString(pics, name)
+					WriteLongString(pics, u.Image)
+				}
+			}
+			s.UserLock.RUnlock()
+			u.Conn.Write(NewPacket(TImageArchive, "Server", pics.Bytes()).GetBytes())
 			u.Listen()
 		} else {
 			u.Conn.Close()

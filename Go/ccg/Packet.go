@@ -22,6 +22,7 @@ const (
 	TPeerRequest
 	TPeerInfo
 	TImage
+	TImageArchive
 )
 
 type Packet struct {

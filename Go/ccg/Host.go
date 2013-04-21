@@ -128,7 +128,6 @@ func (h *Host) writeMessages() {
 				h.Reader <- rp
 				continue
 			case "pic":
-				log.Println("PIC!")
 				if len(args) > 1 {
 					go h.SendImage(args[1])
 				}
@@ -164,8 +163,7 @@ func (h *Host) SendImage(path string) error {
 	if err != nil {
 		return err
 	}
-	img, str, err := image.Decode(f)
-	log.Println(str)
+	img, _, err := image.Decode(f)
 	if err != nil {
 		return err
 	}
@@ -265,15 +263,32 @@ func (h *Host) readMessages() {
 				f.Close()
 				log.Println("Wrote user image!")
 			}
-		case TJoin:
-			if p.Username != h.username {
-				h.Reader <- p
+		case TImageArchive:
+			buf := bytes.NewBuffer(p.Payload)
+			var err error
+			for err == nil {
+				name, err := ReadShortString(buf)
+				if err != nil {
+					break
+				}
+				img, err := ReadLongString(buf)
+				if err != nil {
+					break
+				}
+				f, _ := os.Create(ImgDir + name + ".png")
+				f.Write(img)
+				f.Close()
+				log.Printf("Wrote image for %s.\n", name)
 			}
-
-		default:
+	case TJoin:
+		if p.Username != h.username {
 			h.Reader <- p
 		}
+
+	default:
+		h.Reader <- p
 	}
+}
 }
 
 func (h *Host) Register(handle, password string) {
