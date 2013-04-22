@@ -38,23 +38,15 @@ func LoadFile(path string) (*File, error) {
 	//Get file info and calculate block count
 	finfo, _ := os.Stat(path)
 	size := finfo.Size()
-	compr := false
-	if size > BlockSize {
-		compr = true
-	}
 	var reader io.Reader
-	if compr {
-		//read in file and compress it
-		arr,_ := ioutil.ReadAll(f)
-		buff := new(bytes.Buffer)
-		wr := gzip.NewWriter(buff)
-		wr.Write(arr)
-		wr.Close()
-		reader = buff
-		size = int64(buff.Len())
-	} else {
-		reader = f
-	}
+	//read in file and compress it
+	arr,_ := ioutil.ReadAll(f)
+	buff := new(bytes.Buffer)
+	wr := gzip.NewWriter(buff)
+	wr.Write(arr)
+	wr.Close()
+	reader = buff
+	size = int64(buff.Len())
 
 	//Calculate the number of blocks needed
 	numBlocks := size / BlockSize
@@ -63,15 +55,8 @@ func LoadFile(path string) (*File, error) {
 	}
 
 	//Create the file object
-	cbyte := byte(0)
-	if compr {
-		cbyte = 1
-	}
+	cbyte := byte(1)
 	rf := File{finfo.Name(), 0, make([]*block, numBlocks), cbyte}
-
-	if compr {
-		rf.Filename += ".gz"
-	}
 
 	//Read the file into blocks
 	blockCount := 0
@@ -104,9 +89,12 @@ func (f *File) Save() error {
 	if err != nil {
 		return err
 	}
+	loBuf := new(bytes.Buffer)
 	for i := 0; i < len(f.data); i++ {
-		fi.Write(f.data[i].data)
+		loBuf.Write(f.data[i].data)
 	}
+	zipRead,_ := gzip.NewReader(loBuf)
+	io.Copy(fi, zipRead)
 	fi.Close()
 	return nil
 }

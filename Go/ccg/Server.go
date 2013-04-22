@@ -306,10 +306,23 @@ func (s *Server) MessageHandler() {
 			s.messages.PushMessage(p)
 			s.parse <- p
 		case TRegister:
-			s.regReqs[p.Username] = p.Payload
+			s.UserLock.RLock()
+			_, uex := s.users[p.Username]
+			s.UserLock.RUnlock()
+			if uex {
+				log.Println("User already exists.")
+				continue
+			}
+			s.regLock.Lock()
+			if _, exists := s.regReqs[p.Username]; !exists {
+				s.regReqs[p.Username] = p.Payload
 			log.Printf("sending out reg request for %s\n",p.Username)
 			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
 			s.parse <- p
+			} else {
+				log.Println("User already sent registration request.")
+			}
+			s.regLock.Unlock()
 		case TCommand:
 			s.command(p)
 		case THistory:
