@@ -7,6 +7,9 @@
 			var lockToBottom = true;
 
 			function DoLogin() {
+				document.getElementById("LoginScreen").style.display = 'none';
+
+				ShowMessage("Logging in...");
 				websock.send("login");
 				var server = document.getElementById("server").value;
 				websock.send(server);
@@ -32,7 +35,7 @@
 			}
 
 			function StartChatMode() {
-				document.getElementById("LoginScreen").style.display = 'none';
+				HideMessage();
 				document.getElementById("ChatScreen").style.display = 'block';
 
 				//Make the websocket protocol just use json
@@ -82,6 +85,19 @@
 				var erb = document.getElementById("ErrorBox");
 				erb.style.opacity = 0;
 				setTimeout(function() {erb.style.display = 'none';}, 1000)
+			}
+
+			function ShowMessage(message) {
+				var mbox = document.getElementById("NoticeBox");
+				mbox.innerHTML = message;
+				mbox.style.display = 'block';
+				mbox.style.opacity = 1;
+			}
+
+			function HideMessage() {
+				var erb = document.getElementById("NoticeBox");
+				erb.style.opacity = 0;
+				erb.style.display = 'none';
 			}
 
 			//Functions for auto scrolling the chat div
@@ -405,7 +421,7 @@
 				margin-right:auto;
 			}
 
-			div#ErrorBox {
+			.alertBox {
 				text-align:center;
 				font-weight: bold;
 				margin-top:20px;
@@ -415,13 +431,22 @@
 				margin-left:auto;
 				margin-right:auto;
 				border-radius:3px;
-				background:#DC143C;
 
 				opacity: 0;
+				display: none;
+
+			}
+			div#ErrorBox {
 			    transition: opacity 1s ease-out;
 			    -webkit-transition: opacity 1s ease-out;
-				display: none;
+				background:#DC143C;
 			}
+
+			div#NoticeBox {
+				color:#EFEFEF;
+				background:#282830;
+			}
+
 			#textInput {
 				position: absolute;
 				height:30px;
@@ -462,9 +487,9 @@
 				</center>
 			</div>
 		</div>
-		<div id="ErrorBox">
+		<div id="ErrorBox" class="alertBox">
 		</div>
-		<div id="NoticeBox">
+		<div id="NoticeBox" class="alertBox">
 		</div>
 		<div id="ChatScreen">
 			<div id="chat-window"></div>

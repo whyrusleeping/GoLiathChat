@@ -42,6 +42,15 @@ func (p Packet) GetBytes() []byte {
 	return buf.Bytes()
 }
 
+func (p Packet) WriteSelf(w io.Writer) error {
+	w.Write([]byte{p.Typ})
+	w.Write(WriteInt32(int32(p.Timestamp)))
+	w.Write(BytesFromShortString(p.Username))
+	w.Write(WriteInt32(int32(len(p.Payload))))
+	w.Write(p.Payload)
+	return nil //TODO: error handling here
+}
+
 func ReadPacket(conn io.Reader) (*Packet, error) {
 	flagBuf := make([]byte,1)
 	//Need to check connectivity to see if a disconnect has happened

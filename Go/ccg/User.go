@@ -11,12 +11,13 @@ type User struct {
 	Nickname  string
 	perms     byte
 	Outp      chan<- *Packet
+	PassHash  []byte
 	connected bool
 	Image	  []byte
 }
 
 func UserWithConn(Conn net.Conn) *User {
-	u := User{Conn, "", "",0, nil, true, nil}
+	u := User{Conn, "", "",0, nil,nil, true, nil}
 	return &u
 }
 

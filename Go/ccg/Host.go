@@ -180,10 +180,10 @@ func (h *Host) readMessages() {
 		if p.Typ == 0 {
 			panic("well shit")
 		}
-		fmt.Printf("Got packet %s\n",p.Typ)
 		if err != nil {
 			log.Println(err)
 			os.Exit(1)
+			//TODO: maaayybeee dont die right here?
 		}
 		//No error, continue on!
 		switch p.Typ {
@@ -264,14 +264,16 @@ func (h *Host) readMessages() {
 				log.Println("Wrote user image!")
 			}
 		case TImageArchive:
+			log.Println("receive image archive.")
 			buf := bytes.NewBuffer(p.Payload)
+			picZip, _ := gzip.NewReader(buf)
 			var err error
 			for err == nil {
-				name, err := ReadShortString(buf)
+				name, err := ReadShortString(picZip)
 				if err != nil {
 					break
 				}
-				img, err := ReadLongString(buf)
+				img, err := ReadLongString(picZip)
 				if err != nil {
 					break
 				}
@@ -280,6 +282,7 @@ func (h *Host) readMessages() {
 				f.Close()
 				log.Printf("Wrote image for %s.\n", name)
 			}
+			log.Println("Finished reading image archive.")
 	case TJoin:
 		if p.Username != h.username {
 			h.Reader <- p
@@ -297,7 +300,6 @@ func (h *Host) Register(handle, password string) {
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
 	phash := HashPassword(password)
-	log.Println(phash)
 	h.conn.Write(phash)
 }
 

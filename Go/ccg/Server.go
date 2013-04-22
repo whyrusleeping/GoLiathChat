@@ -21,8 +21,8 @@ var ufLoc string //Users file location
 type Server struct {
 	regReqs    map[string][]byte
 	regLock    sync.Mutex
-	PassHashes map[string][]byte
-	PHlock	   sync.RWMutex
+	//PassHashes map[string][]byte
+	//PHlock	   sync.RWMutex
 	users      map[string]*User
 	UserLock   sync.RWMutex
 	uplFiles   map[string]*File
@@ -38,7 +38,7 @@ func init() {
 
 func (s *Server) LoginPrompt() {
 	s.loadUserList(ufLoc)
-	if len(s.PassHashes) > 0 {
+	if len(s.users) > 0 {
 		return
 	}
 	var handle string
@@ -47,7 +47,7 @@ func (s *Server) LoginPrompt() {
 	fmt.Scanf("%s", &handle)
 	fmt.Println("Password:")
 	fmt.Scanf("%s", &pass)
-	s.PassHashes[handle] = HashPassword(pass)
+	s.users[handle].PassHash = HashPassword(pass)
 	s.saveUserList(ufLoc)
 }
 
@@ -68,8 +68,8 @@ func StartServer() *Server {
 	s := Server{
 		make(map[string][]byte),
 		sync.Mutex{},
-		make(map[string][]byte),
-		sync.RWMutex{},
+		//make(map[string][]byte),
+		//sync.RWMutex{},
 		make(map[string]*User),
 		sync.RWMutex{},
 		make(map[string]*File),
@@ -82,79 +82,81 @@ func StartServer() *Server {
 	return &s
 }
 
-func (s *Server) HandleUser(u *User, outp chan<- *Packet) {
+func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 	log.Println("New connection!")
-	u.Outp = outp
+	//u.Outp = outp
 	checkByte := make([]byte, 1)
-	u.Conn.Read(checkByte)
+	c.Read(checkByte)
 	if checkByte[0] == TLogin {
-		if s.AuthUser(u) {
-			s.UserLock.Lock()
-			s.users[u.Username] = u
-			s.UserLock.Unlock()
-			outp <- NewPacket(TJoin, u.Nickname, []byte(u.Nickname + " has joined the chat."))
-			/* Send history to user */
-			hist := s.messages.LastNEntries(200)
-			tbuf := new(bytes.Buffer)
-			zipp := gzip.NewWriter(tbuf)
-			for _,m := range hist {
-				if m != nil {
-					m.Typ = THistory
-					temp := m.GetBytes()
-					zipp.Write(temp)
-				}
-			}
-			zipp.Close()
-			u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
-			/* now send images for each user */
-			pics := new(bytes.Buffer)
-			s.UserLock.RLock()
-			for name, u := range s.users {
-				if u.Image != nil {
-					WriteShortString(pics, name)
-					WriteLongString(pics, u.Image)
-				}
-			}
-			s.UserLock.RUnlock()
-			u.Conn.Write(NewPacket(TImageArchive, "Server", pics.Bytes()).GetBytes())
-			u.Listen()
-		} else {
-			u.Conn.Close()
+		ok, u := s.AuthUser(c)
+		if !ok {
+			c.Close()
+			return
 		}
+		outp <- NewPacket(TJoin, u.Nickname, []byte(u.Nickname + " has joined the chat."))
+		/*send images for each user */
+		pics := new(bytes.Buffer)
+		picZip := gzip.NewWriter(pics)
+
+		s.UserLock.RLock()
+		for name, iu := range s.users {
+			if iu.Image != nil {
+				WriteShortString(picZip, name)
+				WriteLongString(picZip, iu.Image)
+			}
+		}
+		s.UserLock.RUnlock()
+		picZip.Close()
+		b := pics.Bytes()
+
+		u.Conn.Write(NewPacket(TImageArchive, "Server", b).GetBytes())
+		/* Send history to user */
+		tbuf := new(bytes.Buffer)
+		zipp := gzip.NewWriter(tbuf)
+		hist := s.messages.LastNEntries(200)
+		for _,m := range hist {
+			if m != nil {
+				m.Typ = THistory
+				temp := m.GetBytes()
+				zipp.Write(temp)
+			}
+		}
+		zipp.Close()
+		u.Conn.Write(NewPacket(THistory, "Server", tbuf.Bytes()).GetBytes())
+
+		u.connected = true
+		u.Outp = outp
+		u.Listen()
 	} else if checkByte[0] == TRegister {
-		uname, _ := ReadShortString(u.Conn)
+		uname, _ := ReadShortString(c)
 		key := bufPool.GetBuffer(32)
-		u.Conn.Read(key)
+		c.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(TRegister, uname, key)
 		outp <- rp
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
-		u.Conn.Close()
-	} else {
-		u.Conn.Close()
 	}
+	c.Close()
 }
 
 //Authenticate the user against the list of users in the PassHashes map
-func (s *Server) AuthUser(u *User) bool {
+func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	//Read the length of the clients Username, followed by the Username
-	ulen := ReadInt32(u.Conn)
+	ulen := ReadInt32(c)
 	unamebuf := bufPool.GetBuffer(int(ulen))
-	u.Conn.Read(unamebuf)
+	c.Read(unamebuf)
+
+	uname := string(unamebuf)
+	u := s.users[uname]
+	u.Conn = c
 	u.Username = string(unamebuf)
 	u.Nickname = u.Username
+
 	bufPool.Free(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", u.Username)
-	s.PHlock.RLock()
-	password, ok := s.PassHashes[u.Username]
-	s.PHlock.RUnlock()
-	if !ok {
-		log.Println("Not a registered user! Closing connection.")
-		return false
-	}
-
-	//Generate a challenge and send it to the server
+	password := u.PassHash
+	//Generate a challenge and send it to the client
 	sc := GeneratePepper()
 	u.Conn.Write(sc)
 
@@ -180,7 +182,7 @@ func (s *Server) AuthUser(u *User) bool {
 	bufPool.Free(cc)
 	if !ver {
 		log.Println("Invalid Authentication")
-		return false
+		return false, nil
 	}
 
 	//Generate a response to the client
@@ -192,7 +194,7 @@ func (s *Server) AuthUser(u *User) bool {
 	u.Conn.Read(lflags)
 
 	log.Println("Authenticated!")
-	return true
+	return true, u
 }
 
 //Listen for new connections and handle them accordingly
@@ -209,8 +211,7 @@ func (s *Server) Listen() {
 		defer Conn.Close()
 		log.Printf("server: accepted from %s", Conn.RemoteAddr())
 		//_, ok := Conn.(*tls.Conn) //Type assertion
-		u := UserWithConn(Conn)
-		go s.HandleUser(u, s.com) //Asynchronously listen to the connection
+		go s.HandleUser(Conn, s.com) //Asynchronously listen to the connection
 	}
 }
 
@@ -223,10 +224,14 @@ func (s *Server) command(p *Packet) {
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
 		} else {
-			s.PHlock.Lock()
-			s.PassHashes[args[1]] = s.regReqs[args[1]]
-			s.PHlock.Unlock()
+			//TODO: make a user here
+			nu := &User{}
+			nu.Username = args[1]
+			nu.connected = false
+			s.regLock.Lock()
+			nu.PassHash = s.regReqs[args[1]]
 			delete(s.regReqs, args[1])
+			s.regLock.Unlock()
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList(ufLoc)
 		}
@@ -296,7 +301,6 @@ func (s *Server) command(p *Packet) {
 func (s *Server) MessageHandler() {
 	for {
 		p := <-s.com
-		log.Println(p.Typ)
 		switch p.Typ {
 		case TMessage:
 			s.messages.PushMessage(p)
@@ -390,14 +394,8 @@ func (s *Server) MessageWriter() {
 		}
 		b := p.GetBytes()
 		s.UserLock.RLock()
-		for uname, u := range s.users {
-			if !u.connected {
-				go func() {
-					s.UserLock.Lock()
-					delete(s.users, uname)
-					s.UserLock.Unlock()
-				}()
-			} else {
+		for _, u := range s.users {
+			if u.connected {
 				_, err := u.Conn.Write(b)
 				if err != nil {
 					log.Printf("Packet failed to send to %s.\n", u.Username)
@@ -470,7 +468,9 @@ func (s *Server) loadUserList(filename string) {
 		//f.Read(perm)
 		phash := make([]byte, 32)
 		f.Read(phash)
-		s.PassHashes[uname] = phash
+		nu := new(User)
+		nu.PassHash = phash
+		s.users[uname] = nu
 	}
 }
 
@@ -479,11 +479,11 @@ func (s *Server) saveUserList(filename string) {
 	if err != nil {
 		log.Println(err)
 	}
-	s.PHlock.RLock()
-	for name, phash := range s.PassHashes {
+	s.UserLock.RLock()
+	for name, u := range s.users {
 		f.Write(BytesFromShortString(name))
-		f.Write(phash)
+		f.Write(u.PassHash)
 	}
-	s.PHlock.RUnlock()
+	s.UserLock.RUnlock()
 	f.Close()
 }
