@@ -47,7 +47,11 @@ func (s *Server) LoginPrompt() {
 	fmt.Scanf("%s", &handle)
 	fmt.Println("Password:")
 	fmt.Scanf("%s", &pass)
-	s.users[handle].PassHash = HashPassword(pass)
+	au := new(User)
+	au.Username = handle
+	au.Nickname = handle
+	au.PassHash = HashPassword(pass)
+	s.users[handle] = au
 	s.saveUserList(ufLoc)
 }
 
@@ -148,7 +152,19 @@ func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	c.Read(unamebuf)
 
 	uname := string(unamebuf)
-	u := s.users[uname]
+	u, ok := s.users[uname]
+	if !ok {
+		//User does not exist!!
+
+		//DEBUG CODE
+		for name, use := range s.users {
+			fmt.Println(name)
+			fmt.Println(use.Username)
+		}
+		//END DEBUG CODE
+
+		return false, nil
+	}
 	u.Conn = c
 	u.Username = string(unamebuf)
 	u.Nickname = u.Username
@@ -225,13 +241,16 @@ func (s *Server) command(p *Packet) {
 			log.Println("No user specified for command 'accept'")
 		} else {
 			//TODO: make a user here
-			nu := &User{}
+			nu := new(User)
 			nu.Username = args[1]
 			nu.connected = false
 			s.regLock.Lock()
 			nu.PassHash = s.regReqs[args[1]]
 			delete(s.regReqs, args[1])
 			s.regLock.Unlock()
+			s.UserLock.Lock()
+			s.users[nu.Username] = nu
+			s.UserLock.Unlock()
 			log.Printf("%s registered!\n", args[1])
 			s.saveUserList(ufLoc)
 		}
