@@ -133,7 +133,7 @@ func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 		u.Listen()
 	} else if checkByte[0] == TRegister {
 		uname, _ := ReadShortString(c)
-		key := bufPool.GetBuffer(32)
+		key := make([]byte, 32)
 		c.Read(key)
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(TRegister, uname, key)
@@ -148,7 +148,7 @@ func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	//Read the length of the clients Username, followed by the Username
 	ulen := ReadInt32(c)
-	unamebuf := bufPool.GetBuffer(int(ulen))
+	unamebuf := make([]byte, ulen)
 	c.Read(unamebuf)
 
 	uname := string(unamebuf)
@@ -169,7 +169,6 @@ func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	u.Username = string(unamebuf)
 	u.Nickname = u.Username
 
-	bufPool.Free(unamebuf)
 	log.Printf("User %s is trying to authenticate.\n", u.Username)
 	password := u.PassHash
 	//Generate a challenge and send it to the client
@@ -177,8 +176,8 @@ func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	u.Conn.Write(sc)
 
 	//Read the clients password hash and their response to the challenge
-	hashA := bufPool.GetBuffer(32)
-	cc := bufPool.GetBuffer(32)
+	hashA := make([]byte, 32)
+	cc := make([]byte, 32)
 	u.Conn.Read(hashA)
 	u.Conn.Read(cc)
 
@@ -194,8 +193,6 @@ func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	for i := 0; ver && i < len(hashA); i++ {
 		ver = ver && (hashA[i] == hashAver[i])
 	}
-	bufPool.Free(hashA)
-	bufPool.Free(cc)
 	if !ver {
 		log.Println("Invalid Authentication")
 		return false, nil

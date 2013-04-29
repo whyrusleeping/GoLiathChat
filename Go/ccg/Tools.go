@@ -20,16 +20,13 @@ import (
 //Awesome salt thanks to travis lane.
 var tSalt = "brownchocolatemoosecoffeelatte"
 
-var bufPool4b = NewBufferPool(16)
-
 func ReadInt32(c io.Reader) int32 {
-	buf := bufPool4b.GetBuffer(4)
+	buf := make([]byte, 4)
 	c.Read(buf)
 	r := int32(buf[0])
 	r += int32(buf[1]) << 8
 	r += int32(buf[2]) << 16
 	r += int32(buf[3]) << 24
-	bufPool4b.Free(buf)
 	return r
 }
 
@@ -78,10 +75,9 @@ func ReadShortString(c io.Reader) (string, error) {
 	if r < 0 {
 		return "", errors.New("Cannot have length < 0")
 	}
-	strbuf := bufPool.GetBuffer(int(r))
+	strbuf := make([]byte, r)
 	c.Read(strbuf)
 	str := string(strbuf)
-	bufPool.Free(strbuf)
 	return str, nil
 }
 
@@ -107,7 +103,7 @@ func WriteLongString(w io.Writer, s []byte) {
 }
 
 func GeneratePepper() []byte {
-	pep := bufPool.GetBuffer(32)
+	pep := make([]byte, 32)
 	rand.Reader.Read(pep)
 	return pep
 }
