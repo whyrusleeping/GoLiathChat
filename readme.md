@@ -5,9 +5,9 @@
 GoLiath chat is a simple secure server-client chat system with 
 login and verification implemented in go.
 
-Currently we are using a custom webkit browser and html/js/css (read: bootstrap and jquery) for our UI. We chose this method as it is very cross platform (everyone can open a webpage, right?), and allows for lots of customization. Also, it is very lightweight compared to other UI Kit frameworks (I'm looking at you .NET). 
+Currently we are using a custom webkit browser and html/js/css for our UI. We chose this method as it is very cross platform (everyone can open a webpage, right?), and allows for lots of customization. Also, it is very lightweight compared to other UI Kit frameworks (I'm looking at you .NET). 
 
-We use port 10234 to communicate, be sure to have it open if you are running a server.
+We use port 10234 to communicate, be sure to have it open if you are running a server. 
 
 ##Goals
 Our main goal for this project is to have a quick and secure chatroom that will be as simple as possible to set up and connect to. 
@@ -15,6 +15,7 @@ Our main goal for this project is to have a quick and secure chatroom that will 
 ##Server
 Features:
 - Retrievable chat history
+- Secure communication
 - File transfers
 - Small footprint
 
