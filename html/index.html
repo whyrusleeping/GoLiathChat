@@ -145,13 +145,18 @@
 				}
 
 				this.postMessage = function(e) {
+					textBox = document.getElementById("textInput");
+					if (textBox.value[0] == '/') {
+						textBox.style.background = "#A6A6A6";
+					} else {
+						textBox.style.background = "white";
+					}
 					e.which = e.which || e.keyCode;
 					if (e.which == 13) {
-						var buffer = document.getElementById("textInput").value;
+						var buffer = textBox.value;
 						if (buffer.length > 0) {
 							websock.send(buffer);
-							//chatObject("Jeromy", buffer, "img/3.png");
-							document.getElementById("textInput").value = "";
+							textBox.value = "";
 						}
 					}
 				}

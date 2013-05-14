@@ -232,7 +232,8 @@ func (h *Host) readMessages() {
 			//This will require NAT traversal and other ugly things.. bleh
 
 			//For now, just attempt a TCP connection
-			//Actually, just do nothing for now. Because doing nothing is better than crappy code. FALSE
+			//Actually, just do nothing for now. Because doing nothing is better than crappy code, right?
+			//This is really only still here because i intend to do this eventually
 		case THistory:
 			log.Println("History!")
 			rbuf := bytes.NewReader(p.Payload)
