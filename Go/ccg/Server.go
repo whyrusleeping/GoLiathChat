@@ -308,6 +308,10 @@ func (s *Server) command(p *Packet) {
 		s.users[p.Username].connected = false
 		s.UserLock.Unlock()
 	default:
+		pay := ""
+		if len(args) > 1 {
+			pay = args[1]
+		}
 		log.Printf("Command '%s' unrecognized\nPayload: %s", args[0], args[1])
 	}
 }
