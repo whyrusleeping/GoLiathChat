@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var HelpMessage []byte = []byte("Goliath Chat Commands:<br>/pic [path to local file]    upload an image to use as ison.<br>/upload [path to file]    upload a file for others to download<br>/dl [filename]    downloads file from the server<br>/names    prints a list of who is on the server")
+
 var ufLoc string //Users file location
 
 type Server struct {
@@ -233,6 +235,8 @@ func (s *Server) command(p *Packet) {
 	args := strings.Split(string(p.Payload[1:]), " ")
 
 	switch args[0] {
+	case "help":
+		go s.Broadcast(p.Username, NewPacket(TMessage, "Help", HelpMessage))
 	case "accept":
 		if len(args) < 2 {
 			log.Println("No user specified for command 'accept'")
@@ -267,7 +271,9 @@ func (s *Server) command(p *Packet) {
 		s.UserLock.RLock()
 		names := "Users Online:\n"
 		for _, u := range s.users {
-			names += fmt.Sprintf("[%s]",u.Nickname)
+			if u.connected {
+				names += fmt.Sprintf("[%s]",u.Nickname)
+			}
 		}
 		ruser := s.users[p.Username]
 		s.UserLock.RUnlock()
@@ -312,7 +318,7 @@ func (s *Server) command(p *Packet) {
 		if len(args) > 1 {
 			pay = args[1]
 		}
-		log.Printf("Command '%s' unrecognized\nPayload: %s", args[0], args[1])
+		log.Printf("Command '%s' unrecognized\nPayload: %s", args[0], pay)
 	}
 }
 
@@ -336,9 +342,9 @@ func (s *Server) MessageHandler() {
 			s.regLock.Lock()
 			if _, exists := s.regReqs[p.Username]; !exists {
 				s.regReqs[p.Username] = p.Payload
-			log.Printf("sending out reg request for %s\n",p.Username)
-			p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
-			s.parse <- p
+				log.Printf("sending out reg request for %s\n",p.Username)
+				p.Payload = []byte(fmt.Sprintf("%s requests authentication.", p.Username))
+				s.parse <- p
 			} else {
 				log.Println("User already sent registration request.")
 			}
