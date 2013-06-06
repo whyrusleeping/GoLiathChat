@@ -11,9 +11,11 @@ import (
 	"fmt"
 	"time"
 	"log"
+	"io"
 	"github.com/nfnt/resize"
 	"image"
 	"image/png"
+	"net/http"
 )
 
 var ImgDir string = GetBinDir() + "../html/img/"
@@ -152,14 +154,22 @@ func (h *Host) SendFile(path string) error {
 	h.Writer <- NewPacket(TFileInfo, "", fi.getInfo())
 	for i := 0; i < len(fi.data); i++ {
 		h.Writer <- NewPacket(TFile, "", fi.getBytesForBlock(i))
-		//Wait two milliseconds between sendings
+		//Dont flood!
 		time.Sleep(time.Millisecond * 2)
 	}
 	return nil
 }
 
 func (h *Host) SendImage(path string) error {
-	f, err := os.Open(path)
+	var f io.Reader
+	var err error
+	if path[:4] == "http" {
+		resp, hterr := http.Get(path)
+		err = hterr
+		f = resp.Body
+	} else {
+		f, err = os.Open(path)
+	}
 	if err != nil {
 		return err
 	}
@@ -284,15 +294,15 @@ func (h *Host) readMessages() {
 				log.Printf("Wrote image for %s.\n", name)
 			}
 			log.Println("Finished reading image archive.")
-	case TJoin:
-		if p.Username != h.username {
+		case TJoin:
+			if p.Username != h.username {
+				h.Reader <- p
+			}
+
+		default:
 			h.Reader <- p
 		}
-
-	default:
-		h.Reader <- p
 	}
-}
 }
 
 func (h *Host) Register(handle, password string) {
