@@ -4,7 +4,7 @@
 
 ##Message Protocol 
 ###Packet Format
-|  Flag  | Timespamp | Username Length | Username   | Message Length  |    Message   |
+|  Flag  | Timestamp | Username Length | Username   | Message Length  |    Message   |
 |:------:|:---------:|:---------------:|:----------:|:---------------:|:------------:|
 | 1 byte |  4 bytes  |  2 bytes        | ulen bytes | 4 bytes         |'Length' bytes|
 
