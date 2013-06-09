@@ -7,6 +7,7 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
     "github.com/mattn/go-gtk/gtk"
@@ -162,6 +163,7 @@ func initPage(title string, uri string, size_x int, size_y int) {
 }
 
 func main() {
+	runtime.GOMAXPROCS(4)
 	binDirectory = strings.Replace(os.Args[0], "Goliath", "",1)
 	go func() {StartWebSockInterface()}()
 	time.Sleep(time.Millisecond * 50)

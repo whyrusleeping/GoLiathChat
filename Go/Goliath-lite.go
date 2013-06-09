@@ -133,7 +133,6 @@ func StartWebkit() {
 
 func main() {
 	runtime.GOMAXPROCS(4)
-	//binDirectory = strings.Replace(os.Args[0], "Goliath", "",1)
 	binDirectory = ccg.GetBinDir()
 	go func() {
 		time.Sleep(time.Millisecond * 50)
