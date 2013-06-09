@@ -281,6 +281,8 @@ func (s *Server) command(p *Packet) {
 			rp := NewPacket(TMessage, "Server", []byte(names))
 			ruser.Conn.Write(rp.GetBytes())
 		}()
+	case "files":
+		
 	case "ninja":
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
@@ -394,6 +396,7 @@ func (s *Server) MessageHandler() {
 		case TPeerRequest:
 			s.SendBridgeInfoToUser(string(p.Payload), p.Username)
 		case TImage:
+			log.Println("Got image packet.")
 			s.UserLock.Lock()
 			u := s.users[p.Username]
 			u.Image = p.Payload

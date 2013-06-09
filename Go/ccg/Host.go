@@ -2,6 +2,7 @@ package ccg
 
 import (
 	"code.google.com/p/go.crypto/scrypt"
+	"io"
 	"compress/gzip"
 	"crypto/tls"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	"github.com/nfnt/resize"
 	"image"
 	"image/png"
+	_ "image/jpeg"
+	"net/http"
 )
 
 var ImgDir string = GetBinDir() + "../html/img/"
@@ -134,7 +137,13 @@ func (h *Host) writeMessages() {
 				continue
 			}
 		}
+		if p.Typ == TImage {
+			log.Println("Sending image...")
+		}
 		_, err := h.conn.Write(p.GetBytes())
+		if p.Typ == TImage {
+			log.Println("Image sent!")
+		}
 		if err != nil {
 			//log.Printf("Failed to send message.\n")
 			continue
@@ -159,14 +168,27 @@ func (h *Host) SendFile(path string) error {
 }
 
 func (h *Host) SendImage(path string) error {
-	f, err := os.Open(path)
+	var picf io.Reader
+	if path[:4] == "http" {
+		resp, err := http.Get(path)
+		if err != nil {
+			log.Println(err)
+		}
+		picf = resp.Body
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		picf = f
+	}
+	img, _, err := image.Decode(picf)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return err
-	}
+	//This resize call for SOME reason, makes the program unresponsive until it finishes.
+	//Even though this call is ALWAYS in a separate goroutine...
 	res := resize.Resize(50,50,img, resize.Lanczos3)
 	buf := new(bytes.Buffer)
 	png.Encode(buf, res)
@@ -256,14 +278,16 @@ func (h *Host) readMessages() {
 			}
 		case TImage:
 			//Get image and save in appropriate spot
-			f, err := os.Create(ImgDir + p.Username + ".png")
-			if err != nil {
-				log.Println("Failed to write user image.")
-			} else {
-				f.Write(p.Payload)
-				f.Close()
-				log.Println("Wrote user image!")
-			}
+			go func() {
+				f, err := os.Create(ImgDir + p.Username + ".png")
+				if err != nil {
+					log.Println("Failed to write user image.")
+				} else {
+					f.Write(p.Payload)
+					f.Close()
+					log.Println("Wrote user image!")
+				}
+			}()
 		case TImageArchive:
 			log.Println("receive image archive.")
 			buf := bytes.NewBuffer(p.Payload)
@@ -284,15 +308,15 @@ func (h *Host) readMessages() {
 				log.Printf("Wrote image for %s.\n", name)
 			}
 			log.Println("Finished reading image archive.")
-	case TJoin:
-		if p.Username != h.username {
+		case TJoin:
+			if p.Username != h.username {
+				h.Reader <- p
+			}
+
+		default:
 			h.Reader <- p
 		}
-
-	default:
-		h.Reader <- p
 	}
-}
 }
 
 func (h *Host) Register(handle, password string) {
