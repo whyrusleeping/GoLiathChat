@@ -200,7 +200,9 @@ func (h *Host) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
 		if p.Typ == 0 {
-			panic("well shit")
+			log.Println("Server sent disconnect packet, now exiting...")
+			os.Exit(0)
+			h.conn.Close()
 		}
 		if err != nil {
 			log.Println(err)
