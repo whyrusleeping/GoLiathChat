@@ -280,8 +280,10 @@ func (s *Server) command(p *Packet) {
 			rp := NewPacket(TMessage, "Server", []byte(names))
 			ruser.Conn.Write(rp.GetBytes())
 		}()
+		/*
 	case "files":
 		continue
+		*/
 	case "ninja":
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
