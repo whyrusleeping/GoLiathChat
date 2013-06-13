@@ -199,15 +199,18 @@ func (h *Host) SendImage(path string) error {
 func (h *Host) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
+		if err != nil {
+			log.Println(err)
+			if err == io.EOF {
+				log.Println("EOF on socket, implement reconnects please!")
+				os.Exit(1)
+			}
+			//TODO: maaayybeee dont die right here?
+		}
 		if p.Typ == 0 {
 			log.Println("Server sent disconnect packet, now exiting...")
 			os.Exit(0)
 			h.conn.Close()
-		}
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
-			//TODO: maaayybeee dont die right here?
 		}
 		//No error, continue on!
 		switch p.Typ {

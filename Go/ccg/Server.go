@@ -233,7 +233,6 @@ func (s *Server) Listen() {
 //Handles all incoming user commands
 func (s *Server) command(p *Packet) {
 	args := strings.Split(string(p.Payload[1:]), " ")
-
 	switch args[0] {
 	case "help":
 		go s.Broadcast(p.Username, NewPacket(TMessage, "Help", HelpMessage))
@@ -282,7 +281,7 @@ func (s *Server) command(p *Packet) {
 			ruser.Conn.Write(rp.GetBytes())
 		}()
 	case "files":
-		
+		continue
 	case "ninja":
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
