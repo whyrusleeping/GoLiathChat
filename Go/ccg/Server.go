@@ -123,8 +123,7 @@ func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 		for _,m := range hist {
 			if m != nil {
 				m.Typ = THistory
-				temp := m.GetBytes()
-				zipp.Write(temp)
+				m.WriteSelf(zipp)
 			}
 		}
 		zipp.Close()
@@ -190,12 +189,9 @@ func (s *Server) AuthUser(c net.Conn) (bool, *User) {
 	copy(combSalt[len(sc):], cc)
 
 	hashAver, _ := scrypt.Key(password, combSalt, 16384, 8, 1, 32)
+
 	//Verify keys are the same.
-	ver := true
-	for i := 0; ver && i < len(hashA); i++ {
-		ver = ver && (hashA[i] == hashAver[i])
-	}
-	if !ver {
+	if string(hashA) != string(hashAver) {
 		log.Println("Invalid Authentication")
 		return false, nil
 	}
@@ -223,9 +219,8 @@ func (s *Server) Listen() {
 			log.Printf("server: accept: %s", err)
 			break
 		}
-		defer Conn.Close()
+		defer Conn.Close() //close all connections when this function exits
 		log.Printf("server: accepted from %s", Conn.RemoteAddr())
-		//_, ok := Conn.(*tls.Conn) //Type assertion
 		go s.HandleUser(Conn, s.com) //Asynchronously listen to the connection
 	}
 }
@@ -278,10 +273,12 @@ func (s *Server) command(p *Packet) {
 		s.UserLock.RUnlock()
 		go func() {
 			rp := NewPacket(TMessage, "Server", []byte(names))
-			ruser.Conn.Write(rp.GetBytes())
+			rp.WriteSelf(ruser.Conn)
 		}()
+		/*
 	case "files":
 		continue
+		*/
 	case "ninja":
 		s.UserLock.Lock()
 		s.users[p.Username].Nickname = "Anon"
@@ -312,7 +309,9 @@ func (s *Server) command(p *Packet) {
 		s.UserLock.Unlock()
 	case "quit":
 		s.UserLock.Lock()
+		log.Println(p.Username + " left!")
 		s.users[p.Username].connected = false
+		s.users[p.Username].Conn.Close()
 		s.UserLock.Unlock()
 	default:
 		pay := ""
@@ -449,6 +448,7 @@ func (s *Server) MessageWriter() {
 
 //Send information about user 'from' to user 'to' to allow them to create a
 //peer to peer connection
+// (NOT YET USED)
 func (s *Server) SendBridgeInfoToUser(from, to string) {
 	str := s.users[from].Conn.RemoteAddr().String()
 	go func() {
@@ -456,20 +456,20 @@ func (s *Server) SendBridgeInfoToUser(from, to string) {
 	}()
 }
 
-//Send 'file' the the specified user by first sending a file info chunk
+//Send 'file' to the specified user by first sending a file info chunk
 //and then a number of data chunks of size 'BlockSize'
 func (s *Server) SendFileToUser(file *File, username string) error {
-	uc := s.users[username]
-	if uc == nil {
+	uc,ok := s.users[username]
+	if !ok {
 		return errors.New("User does not exist.")
 	}
 	uc.Conn.Write(NewPacket(TFileInfo, "",file.getInfo()).GetBytes())
 	for i := 0; i < len(file.data); i++ {
 		p := NewPacket(TFile,"", file.getBytesForBlock(i))
-		uc.Conn.Write(p.GetBytes())
+		p.WriteSelf(uc.Conn)
+		//Wait two milliseconds between sendings
 		time.Sleep(time.Millisecond * 2)
 	}
-	//Wait two milliseconds between sendings
 	return nil
 }
 

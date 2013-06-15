@@ -38,6 +38,7 @@ type Host struct {
 	filesAvailable []string
 	usersOnline	   []string
 	messages		*MessageLog
+	alive          bool
 }
 
 func NewHost() *Host {
@@ -58,6 +59,7 @@ func NewHost() *Host {
 	h.usersOnline = make([]string, 0, 256)
 	h.filesAvailable = make([]string, 0 ,256)
 	h.messages = NewLog(64)
+	h.alive = true
 	return &h
 }
 
@@ -135,12 +137,15 @@ func (h *Host) writeMessages() {
 					go h.SendImage(args[1])
 				}
 				continue
+			case "quit":
+				log.Println("quitting...")
+				h.alive = false
 			}
 		}
 		if p.Typ == TImage {
 			log.Println("Sending image...")
 		}
-		_, err := h.conn.Write(p.GetBytes())
+		err := p.WriteSelf(h.conn)
 		if p.Typ == TImage {
 			log.Println("Image sent!")
 		}
@@ -200,15 +205,19 @@ func (h *Host) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
 		if err != nil {
+			log.Println("Error on read packet!")
 			log.Println(err)
 			if err == io.EOF {
-				log.Println("EOF on socket, implement reconnects please!")
+				if h.alive {
+					log.Println("EOF on socket, implement reconnects please!")
+				} else {
+					log.Println("User disconnected! have a nice day")
+				}
 				os.Exit(1)
 			}
-			//TODO: maaayybeee dont die right here?
 		}
 		if p.Typ == 0 {
-			log.Println("Server sent disconnect packet, now exiting...")
+			log.Printf("Server disconnected you, reason:\n%s\n",string(p.Payload))
 			os.Exit(0)
 			h.conn.Close()
 		}
