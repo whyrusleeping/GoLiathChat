@@ -71,8 +71,8 @@ func (h *Host) Connect(hostname string) error {
 	}
 	h.conn = conn
 
-	h.Reader = make(chan *Packet)
-	h.Writer = make(chan *Packet)
+	h.Reader = make(chan *Packet, 32)
+	h.Writer = make(chan *Packet, 32)
 
 	return nil
 }
@@ -166,8 +166,6 @@ func (h *Host) SendFile(path string) error {
 	h.Writer <- NewPacket(TFileInfo, "", fi.getInfo())
 	for i := 0; i < len(fi.data); i++ {
 		h.Writer <- NewPacket(TFile, "", fi.getBytesForBlock(i))
-		//Wait two milliseconds between sendings
-		time.Sleep(time.Millisecond * 2)
 	}
 	return nil
 }

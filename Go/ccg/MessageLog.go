@@ -12,16 +12,12 @@ func NewLog(initialSize int) *MessageLog {
 
 //Add the given packet to the history list. Resize array if needed
 func (l *MessageLog) PushMessage(p *Packet) {
-	if l.count >= len(l.messages) {
-		newl := make([]*Packet, l.count * 2)
-		copy(newl, l.messages)
-		l.messages = newl
-	}
-	l.messages[l.count] = p
+	l.messages = append(l.messages, p)
 	l.count++
 }
 
 func (l *MessageLog) AddEntryInOrder(p *Packet) {
+	//TODO: this is bad, fix it!
 	if l.count >= len(l.messages) {
 		newl := make([]*Packet, l.count * 2)
 		copy(newl, l.messages)
