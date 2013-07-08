@@ -1,4 +1,4 @@
-package ccg
+package goliath
 
 type MessageLog struct {
 	messages []*Packet
@@ -17,12 +17,6 @@ func (l *MessageLog) PushMessage(p *Packet) {
 }
 
 func (l *MessageLog) AddEntryInOrder(p *Packet) {
-	//TODO: this is bad, fix it!
-	if l.count >= len(l.messages) {
-		newl := make([]*Packet, l.count * 2)
-		copy(newl, l.messages)
-		l.messages = newl
-	}
 	i := 0
 	for ; i < l.count && l.messages[i].Timestamp < p.Timestamp; i++ {}
 	for j := l.count; j > i; j-- {

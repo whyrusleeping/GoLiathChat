@@ -1,4 +1,4 @@
-package ccg
+package goliath
 
 import (
 	"code.google.com/p/go.crypto/scrypt"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"net"
 	"fmt"
-	"time"
 	"log"
 	"github.com/nfnt/resize"
 	"image"

@@ -11,9 +11,9 @@ number of people
 
 package main
 
-import "./ccg"
+import "./goliath"
 
 func main() {
-	s := ccg.StartServer()
+	s := goliath.StartServer()
 	s.Listen()
 }

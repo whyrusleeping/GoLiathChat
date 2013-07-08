@@ -1,4 +1,4 @@
-package ccg
+package goliath
 
 import (
 	"bytes"
@@ -132,7 +132,7 @@ func SaveCert(c *x509.Certificate) error {
 	return nil
 }
 
-func MakeCert(host string)  error {
+func MakeCert(host string)  (error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		return err

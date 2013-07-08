@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./ccg"
+	"./goliath"
 	"log"
 	"net/http"
 	"code.google.com/p/go.net/websocket"
@@ -47,7 +47,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	var message string
 	var contype string
 
-	serv := ccg.NewHost()
+	serv := goliath.NewHost()
 	success := false
 	inf := "Reading Input"
 	for success == false {

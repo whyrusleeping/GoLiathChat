@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./ccg"
+	"./goliath"
 	"runtime"
 	"log"
 	"net/http"
@@ -45,7 +45,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	var message string
 	var contype string
 
-	serv := ccg.NewHost()
+	serv := goliath.NewHost()
 	success := false
 	inf := "Reading Input"
 	for success == false {
@@ -131,7 +131,7 @@ func StartWebkit() {
 
 func main() {
 	runtime.GOMAXPROCS(4)
-	binDirectory = ccg.GetBinDir()
+	binDirectory = goliath.GetBinDir()
 	go func() {
 		time.Sleep(time.Millisecond * 50)
 		StartWebkit()
