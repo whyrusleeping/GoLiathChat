@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var HelpMessage []byte = []byte("Goliath Chat Commands:<br>/pic [path to local file]    upload an image to use as ison.<br>/upload [path to file]    upload a file for others to download<br>/dl [filename]    downloads file from the server<br>/names    prints a list of who is on the server")
+var HelpMessage []byte = []byte("Goliath Chat Commands:<br>/pic [path to local file]    upload an image to use as icon.<br>/upload [path to file]    upload a file for others to download<br>/dl [filename]    downloads file from the server<br>/names    prints a list of who is on the server")
 
 var ufLoc string //Users file location
 
@@ -52,7 +52,7 @@ func (s *Server) LoginPrompt() {
 	au := new(User)
 	au.Username = handle
 	au.Nickname = handle
-	au.PassHash = HashPassword(pass)
+	au.PassHash = HashPassword(handle, pass)
 	s.users[handle] = au
 	s.saveUserList(ufLoc)
 }

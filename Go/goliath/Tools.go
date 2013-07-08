@@ -108,8 +108,8 @@ func GeneratePepper() []byte {
 	return pep
 }
 
-func HashPassword(password string) []byte {
-	pHash, err := scrypt.Key([]byte(password), []byte(tSalt), 16384, 9, 7, 32)
+func HashPassword(username, password string) []byte {
+	pHash, err := scrypt.Key([]byte(password), []byte(tSalt + username), 16384, 9, 7, 32)
 	if err != nil {
 		panic(err)
 	}

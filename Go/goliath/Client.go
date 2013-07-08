@@ -11,6 +11,7 @@ import (
 	"net"
 	"fmt"
 	"log"
+	"errors"
 	"github.com/nfnt/resize"
 	"image"
 	"image/png"
@@ -27,8 +28,11 @@ const (
 )
 
 //Usage is simple, read messages from the Reader, and write to the Writer.
-type Host struct {
+type Client struct {
 	username	   string
+	phash		   []byte
+	lflags         byte
+	hostname       string
 	conn           net.Conn
 	Writer, Reader chan *Packet
 	cert           tls.Certificate
@@ -40,7 +44,7 @@ type Host struct {
 	alive          bool
 }
 
-func NewHost() *Host {
+func NewClient () *Client {
 	var cert tls.Certificate
 	var err error
 	bin := GetBinDir()
@@ -50,7 +54,7 @@ func NewHost() *Host {
 		err = nil
 	}
 
-	h := Host{}
+	h := Client{}
 	h.cert = cert
 	h.config = &tls.Config{Certificates: []tls.Certificate{cert}, InsecureSkipVerify: true}
 	//h.config = nil
@@ -63,11 +67,12 @@ func NewHost() *Host {
 }
 
 //Connect to the given host and returns any error
-func (h *Host) Connect(hostname string) error {
+func (h *Client) Connect(hostname string) error {
 	conn, err := tls.Dial("tcp", hostname, h.config)
 	if err != nil {
 		return err
 	}
+	h.hostname = hostname
 	h.conn = conn
 
 	h.Reader = make(chan *Packet, 32)
@@ -76,13 +81,62 @@ func (h *Host) Connect(hostname string) error {
 	return nil
 }
 
-func (h *Host) Start() {
+func (c *Client) Reconnect() error {
+	conn, err := tls.Dial("tcp", c.hostname, c.config)
+	if err != nil {
+		return err
+	}
+	c.conn = conn
+
+	loginByte := []byte{TLogin}
+	c.conn.Write(loginByte)
+	ulen := WriteInt32(int32(len(c.username)))
+	c.conn.Write(ulen)
+	c.conn.Write([]byte(c.username))
+	sc := make([]byte, 32)
+	c.conn.Read(sc)
+
+	//Generate a response
+	cc := GeneratePepper()
+	combSalt := make([]byte, len(sc)+len(cc))
+	copy(combSalt, sc)
+	copy(combSalt[len(sc):], cc)
+
+	//Generate a hash of the password with the challenge and response as salts
+	hashA, _ := scrypt.Key(c.phash, combSalt, 16384, 8, 1, 32)
+
+	//write the hash, and the response
+	c.conn.Write(hashA)
+	c.conn.Write(cc)
+	sr := make([]byte, 32)
+
+	//Read the servers response
+	_, err = c.conn.Read(sr)
+	if err != nil {
+		return err
+	}
+	srVer, _ := scrypt.Key(c.phash, combSalt, 16384, 4, 3, 32)
+
+	//and ensure that it is correct
+	for i := 0; i < 32; i++ {
+		if sr[i] != srVer[i] {
+			return errors.New("Invalid response from server")
+		}
+	}
+	//Send login flags to the server
+	loginByte[0] = c.lflags
+	c.conn.Write(loginByte)
+
+	return nil
+}
+
+func (h *Client ) Start() {
 	go h.writeMessages()
 	go h.readMessages()
 }
 
 //Sends a chat message to the server
-func (h *Host) Send(message string) {
+func (h *Client) Send(message string) {
 	mtype := TMessage
 	if message[0] == '/' {
 		mtype = TCommand
@@ -92,14 +146,14 @@ func (h *Host) Send(message string) {
 }
 
 //Perform all cleanup of connection
-func (h *Host) Cleanup() {
+func (h *Client) Cleanup() {
 	if h.conn != nil {
 		h.conn.Close()
 	}
 }
 
 //goroutine for writing out messages and handling errors
-func (h *Host) writeMessages() {
+func (h *Client) writeMessages() {
 	for {
 		p := <-h.Writer
 		if p.Typ == TCommand && p.Payload[0] == '/' {
@@ -156,7 +210,7 @@ func (h *Host) writeMessages() {
 }
 
 //Uploads the given file to the server
-func (h *Host) SendFile(path string) error {
+func (h *Client) SendFile(path string) error {
 	fi, err := LoadFile(path)
 	if err != nil {
 		return err
@@ -169,7 +223,7 @@ func (h *Host) SendFile(path string) error {
 	return nil
 }
 
-func (h *Host) SendImage(path string) error {
+func (h *Client) SendImage(path string) error {
 	var picf io.Reader
 	if path[:4] == "http" {
 		resp, err := http.Get(path)
@@ -198,7 +252,7 @@ func (h *Host) SendImage(path string) error {
 	return nil
 }
 
-func (h *Host) readMessages() {
+func (h *Client) readMessages() {
 	for {
 		p, err := ReadPacket(h.conn)
 		if err != nil {
@@ -206,7 +260,11 @@ func (h *Host) readMessages() {
 			log.Println(err)
 			if err == io.EOF {
 				if h.alive {
-					log.Println("EOF on socket, implement reconnects please!")
+					log.Println("EOF on socket, reconnecting!")
+					err := h.Reconnect()
+					if err == nil {
+						continue
+					}
 				} else {
 					log.Println("User disconnected! have a nice day")
 				}
@@ -262,11 +320,6 @@ func (h *Host) readMessages() {
 			}
 		case TPeerInfo:
 			//attempt to make a connection to the peer
-			//This will require NAT traversal and other ugly things.. bleh
-
-			//For now, just attempt a TCP connection
-			//Actually, just do nothing for now. Because doing nothing is better than crappy code, right?
-			//This is really only still here because i intend to do this eventually
 		case THistory:
 			log.Println("History!")
 			rbuf := bytes.NewReader(p.Payload)
@@ -330,21 +383,21 @@ func (h *Host) readMessages() {
 	}
 }
 
-func (h *Host) Register(handle, password string) {
+func (h *Client) Register(handle, password string) {
 	regByte := make([]byte, 1)
 	regByte[0] = TRegister
 	h.conn.Write(regByte)
 	h.conn.Write(BytesFromShortString(handle))
-	phash := HashPassword(password)
+	phash := HashPassword(handle, password)
 	h.conn.Write(phash)
 }
 
 // Handles login functions, returns true (successful) false (unsucessful)
-func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
+func (h *Client) Login(handle, password string, lflags byte) (bool, string) {
 	loginByte := make([]byte, 1)
 	loginByte[0] = TLogin
 	h.conn.Write(loginByte)
-	iPassHash := HashPassword(password)
+	h.phash = HashPassword(handle, password)
 	//Write the usernames length, followed by the username.
 	ulen := WriteInt32(int32(len(handle)))
 	h.conn.Write(ulen)
@@ -361,7 +414,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	copy(combSalt[len(sc):], cc)
 
 	//Generate a hash of the password with the challenge and response as salts
-	hashA, _ := scrypt.Key(iPassHash, combSalt, 16384, 8, 1, 32)
+	hashA, _ := scrypt.Key(h.phash, combSalt, 16384, 8, 1, 32)
 
 	//write the hash, and the response
 	h.conn.Write(hashA)
@@ -373,7 +426,7 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	if err != nil {
 		return false, "Auth Failed."
 	}
-	srVer, _ := scrypt.Key(iPassHash, combSalt, 16384, 4, 3, 32)
+	srVer, _ := scrypt.Key(h.phash, combSalt, 16384, 4, 3, 32)
 
 	//and ensure that it is correct
 	for i := 0; i < 32; i++ {
@@ -388,10 +441,10 @@ func (h *Host) Login(handle, password string, lflags byte) (bool, string) {
 	return true, "Authenticated"
 }
 
-func (h *Host) RequestPeerToPeer(username string) {
+func (h *Client) RequestPeerToPeer(username string) {
 	h.conn.Write(NewPacket(TPeerRequest,h.username,[]byte(username)).GetBytes())
 }
 
-func (h *Host) RequestHistory(num int) {
+func (h *Client) RequestHistory(num int) {
 	//h.conn.Write(NewPacket(THistory,h.username, WriteInt32(int32(num))).GetBytes())
 }

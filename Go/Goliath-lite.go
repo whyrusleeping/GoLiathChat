@@ -45,7 +45,7 @@ func handleWebsocket(ws *websocket.Conn) {
 	var message string
 	var contype string
 
-	serv := goliath.NewHost()
+	serv := goliath.NewClient()
 	success := false
 	inf := "Reading Input"
 	for success == false {
