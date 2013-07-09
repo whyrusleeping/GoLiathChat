@@ -23,6 +23,7 @@ const (
 	TPeerInfo
 	TImage
 	TImageArchive
+	TReconnect
 )
 
 type Packet struct {

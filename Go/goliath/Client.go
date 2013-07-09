@@ -88,7 +88,7 @@ func (c *Client) Reconnect() error {
 	}
 	c.conn = conn
 
-	loginByte := []byte{TLogin}
+	loginByte := []byte{TReconnect}
 	c.conn.Write(loginByte)
 	ulen := WriteInt32(int32(len(c.username)))
 	c.conn.Write(ulen)

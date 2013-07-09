@@ -132,6 +132,17 @@ func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 		u.connected = true
 		u.Outp = outp
 		u.Listen()
+	} else if checkByte[0] == TReconnect {
+		ok, u := s.AuthUser(c)
+		if !ok {
+			c.Close()
+			return
+		}
+		outp <- NewPacket(TJoin, u.Nickname, []byte(u.Nickname + " has rejoined the chat."))
+
+		u.connected = true
+		u.Outp = outp
+		u.Listen()
 	} else if checkByte[0] == TRegister {
 		uname, _ := ReadShortString(c)
 		key := make([]byte, 32)
@@ -139,6 +150,7 @@ func (s *Server) HandleUser(c net.Conn, outp chan<- *Packet) {
 		log.Printf("%s wishes to register.\n", uname)
 		rp := NewPacket(TRegister, uname, key)
 		outp <- rp
+		//TODO:
 		//Either wait for authentication, or tell user to reconnect after the registration is complete..
 		//Not quite sure how to handle this
 	}
@@ -258,8 +270,9 @@ func (s *Server) command(p *Packet) {
 			sf := s.uplFiles[args[1]]
 			if sf != nil {
 				go s.SendFileToUser(s.uplFiles[args[1]], p.Username)
+			} else {
+				s.Broadcast(p.Username, NewPacket(TMessage, "Server", []byte("No such file!")))
 			}
-			//TODO: Send message back saying 'invalid filename' or whatever
 		}
 	case "names", "who":
 		s.UserLock.RLock()
